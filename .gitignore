@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# SvelteKit
+frontend/.svelte-kit/
+frontend/build/
+
+# Backend build
+backend/dist/
+
+# Flutter generated files
+mobile/.dart_tool/
+mobile/build/
+
+# Logs
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
