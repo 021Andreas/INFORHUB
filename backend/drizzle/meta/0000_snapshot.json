@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "e70d695e-46b7-4e00-b263-f35ddc314efc",
+  "id": "e93ac781-e6d8-4a5b-87bf-4e178857e2ba",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "attendance": {
@@ -29,9 +29,24 @@
           "autoincrement": false,
           "default": "'absent'"
         },
+        "method": {
+          "name": "method",
+          "type": "enum('qr','manual')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'qr'"
+        },
+        "checked_by": {
+          "name": "checked_by",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "checked_at": {
           "name": "checked_at",
-          "type": "timestamp",
+          "type": "datetime",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -45,6 +60,19 @@
           "tableTo": "registrations",
           "columnsFrom": [
             "registration_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "attendance_checked_by_users_id_fk": {
+          "name": "attendance_checked_by_users_id_fk",
+          "tableFrom": "attendance",
+          "tableTo": "users",
+          "columnsFrom": [
+            "checked_by"
           ],
           "columnsTo": [
             "id"
@@ -88,11 +116,25 @@
           "notNull": true,
           "autoincrement": false
         },
+        "certificate_number": {
+          "name": "certificate_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "file_path": {
           "name": "file_path",
           "type": "varchar(500)",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "issued_by": {
+          "name": "issued_by",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "issued_at": {
@@ -118,6 +160,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "certificates_issued_by_users_id_fk": {
+          "name": "certificates_issued_by_users_id_fk",
+          "tableFrom": "certificates",
+          "tableTo": "users",
+          "columnsFrom": [
+            "issued_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -133,6 +188,63 @@
           "name": "certificates_registration_id_unique",
           "columns": [
             "registration_id"
+          ]
+        },
+        "certificates_certificate_number_unique": {
+          "name": "certificates_certificate_number_unique",
+          "columns": [
+            "certificate_number"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "event_categories": {
+      "name": "event_categories",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "event_categories_id": {
+          "name": "event_categories_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "event_categories_name_unique": {
+          "name": "event_categories_name_unique",
+          "columns": [
+            "name"
+          ]
+        },
+        "event_categories_slug_unique": {
+          "name": "event_categories_slug_unique",
+          "columns": [
+            "slug"
           ]
         }
       },
@@ -158,6 +270,20 @@
         "description": {
           "name": "description",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "poster_url": {
+          "name": "poster_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "int",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -213,6 +339,34 @@
           "autoincrement": false,
           "default": "'draft'"
         },
+        "reviewed_by": {
+          "name": "reviewed_by",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -220,16 +374,74 @@
           "notNull": true,
           "autoincrement": false,
           "default": "(now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "events_status_start_idx": {
+          "name": "events_status_start_idx",
+          "columns": [
+            "status",
+            "start_at"
+          ],
+          "isUnique": false
+        },
+        "events_organizer_idx": {
+          "name": "events_organizer_idx",
+          "columns": [
+            "organizer_id"
+          ],
+          "isUnique": false
+        },
+        "events_category_idx": {
+          "name": "events_category_idx",
+          "columns": [
+            "category_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
+        "events_category_id_event_categories_id_fk": {
+          "name": "events_category_id_event_categories_id_fk",
+          "tableFrom": "events",
+          "tableTo": "event_categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "events_organizer_id_users_id_fk": {
           "name": "events_organizer_id_users_id_fk",
           "tableFrom": "events",
           "tableTo": "users",
           "columnsFrom": [
             "organizer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "events_reviewed_by_users_id_fk": {
+          "name": "events_reviewed_by_users_id_fk",
+          "tableFrom": "events",
+          "tableTo": "users",
+          "columnsFrom": [
+            "reviewed_by"
           ],
           "columnsTo": [
             "id"
@@ -273,6 +485,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "type": {
+          "name": "type",
+          "type": "enum('registration_success','registration_cancelled','event_approved','event_rejected','event_reminder','certificate_issued')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "message": {
           "name": "message",
           "type": "varchar(500)",
@@ -297,7 +516,16 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "notifications_user_read_idx": {
+          "name": "notifications_user_read_idx",
+          "columns": [
+            "user_id",
+            "is_read"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "notifications_user_id_users_id_fk": {
           "name": "notifications_user_id_users_id_fk",
@@ -369,6 +597,13 @@
           "autoincrement": false,
           "default": "'registered'"
         },
+        "ticket_code": {
+          "name": "ticket_code",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "registered_at": {
           "name": "registered_at",
           "type": "timestamp",
@@ -376,6 +611,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "(now())"
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -386,6 +628,21 @@
             "user_id"
           ],
           "isUnique": true
+        },
+        "registrations_event_status_idx": {
+          "name": "registrations_event_status_idx",
+          "columns": [
+            "event_id",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "registrations_user_idx": {
+          "name": "registrations_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -424,7 +681,14 @@
           ]
         }
       },
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "registrations_ticket_code_unique": {
+          "name": "registrations_ticket_code_unique",
+          "columns": [
+            "ticket_code"
+          ]
+        }
+      },
       "checkConstraint": {}
     },
     "users": {
@@ -466,12 +730,50 @@
           "autoincrement": false,
           "default": "'mahasiswa'"
         },
+        "status": {
+          "name": "status",
+          "type": "enum('pending_verification','active','suspended')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending_verification'"
+        },
+        "email_verified_at": {
+          "name": "email_verified_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "verification_token_hash": {
+          "name": "verification_token_hash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "verification_expires_at": {
+          "name": "verification_expires_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
+          "default": "(now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
           "default": "(now())"
         }
       },

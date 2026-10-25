@@ -1,13 +1,15 @@
-// See https://svelte.dev/docs/kit/types#app.d.ts
-// for information about these interfaces
+// Ganti seluruh isi src/app.d.ts dengan ini
 declare global {
-	namespace App {
-		// interface Error {}
-		// interface Locals {}
-		// interface PageData {}
-		// interface PageState {}
-		// interface Platform {}
-	}
+  namespace App {
+    interface Locals {
+      user: {
+        id: number;
+        name: string;
+        email: string;
+        role: "mahasiswa" | "penyelenggara" | "admin";
+      } | null;
+    }
+  }
 }
 
 export {};
