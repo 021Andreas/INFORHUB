@@ -24,6 +24,14 @@ export async function api<T = unknown>(path: string, options: Options = {}): Pro
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, data.error ?? 'Terjadi kesalahan');
+  if (!res.ok) {
+    // Backend mengirim `details.fieldErrors` untuk data yang tidak valid
+    const fields = data.details?.fieldErrors as Record<string, string[]> | undefined;
+    const detail = fields
+      ? Object.entries(fields).map(([k, v]) => `${k}: ${v.join(', ')}`).join('; ')
+      : '';
+    const message = data.error ?? `Permintaan gagal (${res.status})`;
+    throw new ApiError(res.status, detail ? `${message} (${detail})` : message);
+  }
   return data as T;
 }
