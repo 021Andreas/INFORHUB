@@ -1,8 +1,36 @@
 
 <script lang="ts">
   import { page } from '$app/state';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { api } from '#lib/api.js';
   let { children } = $props();
   let sidebarOpen = $state(false);
+
+  let user = $state<{ name: string; role: string } | null>(null);
+
+  // Hanya penyelenggara/admin yang boleh masuk area admin.
+  onMount(async () => {
+    try {
+      const res = await api<{ user: { name: string; role: string } }>('/api/auth/me');
+      if (res.user.role === 'mahasiswa') {
+        goto('/');
+        return;
+      }
+      user = res.user;
+    } catch {
+      goto('/login');
+    }
+  });
+
+  async function logout() {
+    try {
+      await api('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // abaikan, tetap arahkan ke halaman login
+    }
+    goto('/login');
+  }
 
   const navGroups = [
     {
@@ -91,6 +119,10 @@
           <span class="nav-icon">↗</span>
           <span>Lihat Situs</span>
         </a>
+        <a href="/login" class="nav-item" onclick={(e) => { e.preventDefault(); logout(); }}>
+          <span class="nav-icon">⎋</span>
+          <span>Keluar</span>
+        </a>
       </div>
     </div>
 
@@ -131,10 +163,10 @@
         </button>
 
         <div class="profile">
-          <div class="avatar">A</div>
+          <div class="avatar">{(user?.name ?? 'A').slice(0, 1).toUpperCase()}</div>
           <div class="profile-copy">
-            <strong>Administrator</strong>
-            <small>Admin</small>
+            <strong>{user?.name ?? 'Memuat...'}</strong>
+            <small>{user?.role === 'admin' ? 'Admin' : user ? 'Penyelenggara' : ''}</small>
           </div>
           <span class="chevron">⌄</span>
         </div>

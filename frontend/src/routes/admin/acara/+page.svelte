@@ -1,6 +1,8 @@
 
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import { api } from '#lib/api.js';
 
   type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed';
 
@@ -15,8 +17,17 @@
     status: EventStatus;
   };
 
-  // Akan diisi dari API backend nantinya.
   let events = $state<EventItem[]>([]);
+
+  // GET /api/events baru mengembalikan acara berstatus published.
+  onMount(async () => {
+    try {
+      const data = await api<Omit<EventItem, 'status'>[]>('/api/events');
+      events = data.map((e) => ({ ...e, status: 'published' as EventStatus }));
+    } catch (e) {
+      console.error('Gagal memuat acara:', e);
+    }
+  });
   let search = $state('');
   let statusFilter = $state('all');
 

@@ -2,6 +2,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import { api } from '#lib/api.js';
 
   let title = $state('');
   let description = $state('');
@@ -42,7 +43,7 @@
     posterUrl = URL.createObjectURL(file);
   }
 
-  function saveEvent() {
+  async function saveEvent() {
     error = '';
 
     if (!title.trim() || !description.trim() || !location.trim()) {
@@ -70,7 +71,35 @@
       return;
     }
 
-    error = 'Form valid. Penyimpanan akan aktif setelah API backend dihubungkan.';
+    try {
+      const created = await api<{ id: number }>('/api/events', {
+        method: 'POST',
+        body: {
+          title: title.trim(),
+          description: description.trim(),
+          // blob: hanya alamat sementara di browser, belum bisa disimpan di server
+          posterUrl: posterUrl.startsWith('http') ? posterUrl : undefined,
+          startAt: new Date(startAt).toISOString(),
+          endAt: new Date(endAt).toISOString(),
+          location: location.trim(),
+          quota
+        }
+      });
+
+      // Acara baru selalu draft. Untuk dipublikasikan: draft -> pending -> published.
+      if (status === 'published') {
+        await api(`/api/events/${created.id}/status`, { method: 'POST', body: { status: 'pending' } });
+        try {
+          await api(`/api/events/${created.id}/status`, { method: 'POST', body: { status: 'published' } });
+        } catch {
+          // Hanya admin yang boleh mempublikasikan; selain itu menunggu persetujuan.
+        }
+      }
+
+      goto('/admin/acara');
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Gagal menyimpan acara.';
+    }
   }
 </script>
 

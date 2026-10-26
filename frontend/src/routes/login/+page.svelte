@@ -1,11 +1,14 @@
 
 <script lang="ts">
+  import { goto } from "$app/navigation";
+  import { api } from "#lib/api.js";
+
   let email = $state("");
   let password = $state("");
   let showPassword = $state(false);
   let error = $state("");
 
-  function handleLogin(event: SubmitEvent) {
+  async function handleLogin(event: SubmitEvent) {
     event.preventDefault();
     error = "";
 
@@ -14,7 +17,15 @@
       return;
     }
 
-    error = "Autentikasi backend belum terhubung.";
+    try {
+      const { user } = await api<{ user: { role: string } }>("/api/auth/login", {
+        method: "POST",
+        body: { email, password }
+      });
+      goto(user.role === "mahasiswa" ? "/" : "/admin");
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Gagal masuk.";
+    }
   }
 </script>
 

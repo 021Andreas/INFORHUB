@@ -1,5 +1,8 @@
 
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { api } from "#lib/api.js";
+
   type EventItem = {
     id: number;
     title: string;
@@ -19,8 +22,48 @@
   let activeCategory = $state("Semua");
   let notice = $state(false);
 
-  // Kosong sampai dihubungkan ke API backend.
+  // Bentuk data dari GET /api/events
+  type ApiEvent = {
+    id: number;
+    title: string;
+    posterUrl: string | null;
+    categoryId: number | null;
+    startAt: string;
+    location: string;
+    quota: number;
+    registered: number;
+  };
+
   let events = $state<EventItem[]>([]);
+
+  // Backend belum mengirim description, organizer, dan nama kategori,
+  // jadi untuk sementara memakai nilai bawaan.
+  function toEventItem(e: ApiEvent): EventItem {
+    const start = new Date(e.startAt);
+    return {
+      id: e.id,
+      title: e.title,
+      description: "",
+      organizer: "Penyelenggara",
+      category: "Umum",
+      date: start.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+      time: start.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+      location: e.location,
+      posterUrl: e.posterUrl ?? "",
+      registered: e.registered,
+      quota: e.quota,
+      status: "Pendaftaran dibuka"
+    };
+  }
+
+  onMount(async () => {
+    try {
+      const data = await api<ApiEvent[]>("/api/events");
+      events = data.map(toEventItem);
+    } catch (e) {
+      console.error("Gagal memuat acara:", e);
+    }
+  });
 
   const categories = [
     "Semua",

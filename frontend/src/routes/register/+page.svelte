@@ -1,5 +1,8 @@
 
 <script lang="ts">
+  import { goto } from "$app/navigation";
+  import { api } from "#lib/api.js";
+
   let name = $state("");
   let email = $state("");
   let password = $state("");
@@ -8,7 +11,7 @@
   let acceptedTerms = $state(false);
   let error = $state("");
 
-  function handleRegister(event: SubmitEvent) {
+  async function handleRegister(event: SubmitEvent) {
     event.preventDefault();
     error = "";
 
@@ -32,7 +35,15 @@
       return;
     }
 
-    error = "Registrasi backend belum terhubung.";
+    try {
+      await api("/api/auth/register", {
+        method: "POST",
+        body: { name, email, password }
+      });
+      goto("/");
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Registrasi gagal.";
+    }
   }
 </script>
 
