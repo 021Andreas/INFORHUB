@@ -1,4 +1,4 @@
-import type { Handle } from "@sveltejs/kit";
+import { json, type Handle } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { getSessionUser } from "$lib/server/auth";
 
@@ -17,18 +17,32 @@ function corsHeaders(origin: string | null): Record<string, string> {
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Expose-Headers": "Content-Disposition, X-Total-Count",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 export const handle: Handle = async ({ event, resolve }) => {
   const isApi = event.url.pathname.startsWith("/api/");
-  const cors = isApi ? corsHeaders(event.request.headers.get("origin")) : {};
+  const origin = event.request.headers.get("origin");
+  const cors = isApi ? corsHeaders(origin) : {};
 
   // Preflight dari browser
   if (isApi && event.request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors });
+  }
+
+  // Perlindungan CSRF untuk semua permintaan yang mengubah data (JSON maupun multipart).
+  // Browser selalu menyertakan Origin pada permintaan lintas situs; origin yang bukan
+  // milik server ini atau frontend resmi ditolak. (svelte.config.js mematikan cek bawaan
+  // SvelteKit karena cek itu memblokir upload multipart dari frontend terpisah.)
+  if (isApi && !SAFE_METHODS.has(event.request.method) && origin) {
+    if (origin !== event.url.origin && !allowedOrigins().includes(origin)) {
+      return json({ error: "Origin tidak diizinkan" }, { status: 403 });
+    }
   }
 
   event.locals.user = await getSessionUser(event.cookies);

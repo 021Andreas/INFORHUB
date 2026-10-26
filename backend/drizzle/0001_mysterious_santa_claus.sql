@@ -1,0 +1,1 @@
+ALTER TABLE `events` ADD `registration_deadline` datetime;

@@ -65,6 +65,8 @@ export const events = mysqlTable(
     startAt: datetime("start_at", { mode: "date" }).notNull(),
     endAt: datetime("end_at", { mode: "date" }).notNull(),
     location: varchar("location", { length: 255 }).notNull(),
+    // Batas akhir pendaftaran (opsional). Kosong = bisa daftar sampai acara selesai.
+    registrationDeadline: datetime("registration_deadline", { mode: "date" }),
     quota: int("quota").notNull(),
     certificateAvailable: boolean("certificate_available")
       .notNull()

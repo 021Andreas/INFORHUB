@@ -2,15 +2,18 @@
 // ASUMSI: `db` di-export dari "$lib/server/db". Sesuaikan jika berbeda.
 
 import { randomBytes } from "node:crypto";
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, isNull, like } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import {
   events,
+  eventCategories,
   registrations,
   attendance,
   certificates,
   notifications,
+  users,
 } from "$lib/server/db/schema";
+import { registeredCount } from "./sql-helpers";
 
 /* ------------------------------------------------------------------ */
 /* Tipe & error                                                        */
@@ -30,25 +33,50 @@ const newTicketCode = () => randomBytes(16).toString("hex"); // 32 karakter
 
 /* ------------------------------------------------------------------ */
 /* 1. Daftar acara untuk homepage: "registered" dihitung, bukan simpan */
+/* Filter opsional: kategori, kata kunci judul, paging.                */
 /* ------------------------------------------------------------------ */
-export async function listPublishedEvents() {
-  return db
+export async function listPublishedEvents(opts: {
+  categoryId?: number;
+  q?: string;
+  limit?: number;
+  offset?: number;
+} = {}) {
+  const limit = opts.limit ?? 20;
+  const offset = opts.offset ?? 0;
+
+  const where = and(
+    eq(events.status, "published"),
+    opts.categoryId ? eq(events.categoryId, opts.categoryId) : undefined,
+    opts.q ? like(events.title, `%${opts.q}%`) : undefined,
+  );
+
+  const items = await db
     .select({
       id: events.id,
       title: events.title,
+      description: events.description,
       posterUrl: events.posterUrl,
       categoryId: events.categoryId,
+      category: eventCategories.name,
+      organizer: users.name,
       startAt: events.startAt,
+      endAt: events.endAt,
+      deadline: events.registrationDeadline,
       location: events.location,
       quota: events.quota,
-      registered: sql<number>`(
-        select count(*) from ${registrations}
-        where ${registrations.eventId} = ${events.id}
-          and ${registrations.status} = 'registered'
-      )`.mapWith(Number),
+      certificateAvailable: events.certificateAvailable,
+      registered: registeredCount(),
     })
     .from(events)
-    .where(eq(events.status, "published"));
+    .leftJoin(eventCategories, eq(eventCategories.id, events.categoryId))
+    .innerJoin(users, eq(users.id, events.organizerId))
+    .where(where)
+    .orderBy(events.startAt)
+    .limit(limit)
+    .offset(offset);
+
+  const [{ total }] = await db.select({ total: count() }).from(events).where(where);
+  return { items, total, limit, offset };
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,6 +96,8 @@ export async function registerForEvent(userId: number, eventId: number) {
       throw new AppError(404, "Acara tidak ditemukan atau belum dibuka");
     if (event.endAt <= new Date())
       throw new AppError(400, "Acara sudah selesai");
+    if (event.registrationDeadline && event.registrationDeadline < new Date())
+      throw new AppError(400, "Pendaftaran sudah ditutup");
 
     const [existing] = await tx
       .select()
@@ -268,18 +298,34 @@ export async function checkIn(
 /* ------------------------------------------------------------------ */
 /* 5. Sertifikat                                                       */
 /* Terbit jika: certificateAvailable, event completed, hadir (present) */
-/* filePath diisi setelah PDF dibuat (generator PDF menyusul).         */
+/* `render` membuat file PDF dan mengembalikan nama/path file-nya.     */
 /* ------------------------------------------------------------------ */
+export type CertificateData = {
+  certificateNumber: string;
+  participantName: string;
+  eventTitle: string;
+  eventStart: Date;
+  eventEnd: Date;
+  location: string;
+};
+export type CertificateRenderer = (data: CertificateData) => Promise<string>;
+
 export async function issueCertificate(
   actor: Actor,
   registrationId: number,
-  filePath: string,
+  render: CertificateRenderer,
 ) {
   return db.transaction(async (tx) => {
     const [row] = await tx
-      .select({ reg: registrations, event: events, att: attendance })
+      .select({
+        reg: registrations,
+        event: events,
+        att: attendance,
+        participantName: users.name,
+      })
       .from(registrations)
       .innerJoin(events, eq(events.id, registrations.eventId))
+      .innerJoin(users, eq(users.id, registrations.userId))
       .leftJoin(attendance, eq(attendance.registrationId, registrations.id))
       .where(eq(registrations.id, registrationId));
 
@@ -290,6 +336,8 @@ export async function issueCertificate(
       throw new AppError(400, "Acara ini tidak menyediakan sertifikat");
     if (row.event.status !== "completed")
       throw new AppError(400, "Acara belum selesai");
+    if (row.reg.status !== "registered")
+      throw new AppError(400, "Pendaftaran sudah dibatalkan");
     if (row.att?.status !== "present")
       throw new AppError(400, "Peserta tidak tercatat hadir");
 
@@ -300,7 +348,16 @@ export async function issueCertificate(
     if (dup) throw new AppError(409, "Sertifikat sudah diterbitkan");
 
     const certificateNumber = `CERT-${row.event.id}-${registrationId}-${new Date().getFullYear()}`;
-    await tx.insert(certificates).values({
+    const filePath = await render({
+      certificateNumber,
+      participantName: row.participantName,
+      eventTitle: row.event.title,
+      eventStart: row.event.startAt,
+      eventEnd: row.event.endAt,
+      location: row.event.location,
+    });
+
+    const [res] = await tx.insert(certificates).values({
       registrationId,
       certificateNumber,
       filePath,
@@ -312,8 +369,56 @@ export async function issueCertificate(
       type: "certificate_issued",
       message: `Sertifikat untuk "${row.event.title}" sudah tersedia.`,
     });
-    return { certificateNumber };
+    return { id: res.insertId, certificateNumber };
   });
+}
+
+// Terbitkan sertifikat untuk semua peserta yang hadir dan belum punya sertifikat
+export async function issueCertificatesForEvent(
+  actor: Actor,
+  eventId: number,
+  render: CertificateRenderer,
+) {
+  const [event] = await db.select().from(events).where(eq(events.id, eventId));
+  if (!event) throw new AppError(404, "Acara tidak ditemukan");
+  if (actor.role !== "admin" && event.organizerId !== actor.id)
+    throw new AppError(403, "Anda bukan penyelenggara acara ini");
+  if (!event.certificateAvailable)
+    throw new AppError(400, "Acara ini tidak menyediakan sertifikat");
+  if (event.status !== "completed") throw new AppError(400, "Acara belum selesai");
+
+  const pending = await db
+    .select({ id: registrations.id })
+    .from(registrations)
+    .innerJoin(
+      attendance,
+      and(eq(attendance.registrationId, registrations.id), eq(attendance.status, "present")),
+    )
+    .leftJoin(certificates, eq(certificates.registrationId, registrations.id))
+    .where(
+      and(
+        eq(registrations.eventId, eventId),
+        eq(registrations.status, "registered"),
+        isNull(certificates.id),
+      ),
+    );
+
+  let issued = 0;
+  const failed: { registrationId: number; error: string }[] = [];
+  for (const r of pending) {
+    try {
+      await issueCertificate(actor, r.id, render);
+      issued++;
+    } catch (e) {
+      if (e instanceof AppError && e.status === 409) continue; // sudah terbit
+      console.error("Gagal menerbitkan sertifikat", r.id, e);
+      failed.push({
+        registrationId: r.id,
+        error: e instanceof AppError ? e.message : "Kesalahan server",
+      });
+    }
+  }
+  return { eligible: pending.length, issued, failed };
 }
 
 // Unduh: pemilik sertifikat, penyelenggara acara, atau admin
