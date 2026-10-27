@@ -13,6 +13,7 @@ import {
   notifications,
   users,
 } from "$lib/server/db/schema";
+import { isDuplicateError } from "$lib/server/db-errors";
 import { registeredCount } from "./sql-helpers";
 
 /* ------------------------------------------------------------------ */
@@ -308,76 +309,92 @@ export type CertificateData = {
   eventEnd: Date;
   location: string;
 };
-export type CertificateRenderer = (data: CertificateData) => Promise<string>;
+export type CertificateStore = {
+  /** Membuat dan menyimpan PDF; mengembalikan referensi (nama file / ID Google Drive). */
+  save: (data: CertificateData) => Promise<string>;
+  /** Membuang file; dipakai bila pencatatan ke database gagal. */
+  remove: (ref: string) => Promise<void>;
+};
 
-export async function issueCertificate(
-  actor: Actor,
-  registrationId: number,
-  render: CertificateRenderer,
-) {
-  return db.transaction(async (tx) => {
-    const [row] = await tx
-      .select({
-        reg: registrations,
-        event: events,
-        att: attendance,
-        participantName: users.name,
-      })
-      .from(registrations)
-      .innerJoin(events, eq(events.id, registrations.eventId))
-      .innerJoin(users, eq(users.id, registrations.userId))
-      .leftJoin(attendance, eq(attendance.registrationId, registrations.id))
-      .where(eq(registrations.id, registrationId));
+/*
+ * Urutan sengaja dibuat 3 tahap:
+ *  1) validasi (hanya membaca)            -> tidak menahan koneksi/lock database
+ *  2) buat + simpan file (bisa lambat: upload ke Google Drive) DI LUAR transaksi
+ *  3) transaksi singkat: catat sertifikat + notifikasi
+ * Jika tahap 3 gagal (termasuk dua permintaan serentak untuk peserta yang sama; unique index
+ * pada registration_id menolak yang kedua), file yang sudah terunggah dibuang agar tidak yatim.
+ */
+export async function issueCertificate(actor: Actor, registrationId: number, store: CertificateStore) {
+  const [row] = await db
+    .select({
+      reg: registrations,
+      event: events,
+      att: attendance,
+      participantName: users.name,
+    })
+    .from(registrations)
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .innerJoin(users, eq(users.id, registrations.userId))
+    .leftJoin(attendance, eq(attendance.registrationId, registrations.id))
+    .where(eq(registrations.id, registrationId));
 
-    if (!row) throw new AppError(404, "Pendaftaran tidak ditemukan");
-    if (actor.role !== "admin" && row.event.organizerId !== actor.id)
-      throw new AppError(403, "Anda tidak berhak menerbitkan sertifikat ini");
-    if (!row.event.certificateAvailable)
-      throw new AppError(400, "Acara ini tidak menyediakan sertifikat");
-    if (row.event.status !== "completed")
-      throw new AppError(400, "Acara belum selesai");
-    if (row.reg.status !== "registered")
-      throw new AppError(400, "Pendaftaran sudah dibatalkan");
-    if (row.att?.status !== "present")
-      throw new AppError(400, "Peserta tidak tercatat hadir");
+  if (!row) throw new AppError(404, "Pendaftaran tidak ditemukan");
+  if (actor.role !== "admin" && row.event.organizerId !== actor.id)
+    throw new AppError(403, "Anda tidak berhak menerbitkan sertifikat ini");
+  if (!row.event.certificateAvailable)
+    throw new AppError(400, "Acara ini tidak menyediakan sertifikat");
+  if (row.event.status !== "completed") throw new AppError(400, "Acara belum selesai");
+  if (row.reg.status !== "registered") throw new AppError(400, "Pendaftaran sudah dibatalkan");
+  if (row.att?.status !== "present") throw new AppError(400, "Peserta tidak tercatat hadir");
 
-    const [dup] = await tx
-      .select({ id: certificates.id })
-      .from(certificates)
-      .where(eq(certificates.registrationId, registrationId));
-    if (dup) throw new AppError(409, "Sertifikat sudah diterbitkan");
+  const [dup] = await db
+    .select({ id: certificates.id })
+    .from(certificates)
+    .where(eq(certificates.registrationId, registrationId));
+  if (dup) throw new AppError(409, "Sertifikat sudah diterbitkan");
 
-    const certificateNumber = `CERT-${row.event.id}-${registrationId}-${new Date().getFullYear()}`;
-    const filePath = await render({
-      certificateNumber,
-      participantName: row.participantName,
-      eventTitle: row.event.title,
-      eventStart: row.event.startAt,
-      eventEnd: row.event.endAt,
-      location: row.event.location,
-    });
-
-    const [res] = await tx.insert(certificates).values({
-      registrationId,
-      certificateNumber,
-      filePath,
-      issuedBy: actor.id,
-    });
-    await tx.insert(notifications).values({
-      userId: row.reg.userId,
-      eventId: row.event.id,
-      type: "certificate_issued",
-      message: `Sertifikat untuk "${row.event.title}" sudah tersedia.`,
-    });
-    return { id: res.insertId, certificateNumber };
+  const certificateNumber = `CERT-${row.event.id}-${registrationId}-${new Date().getFullYear()}`;
+  const ref = await store.save({
+    certificateNumber,
+    participantName: row.participantName,
+    eventTitle: row.event.title,
+    eventStart: row.event.startAt,
+    eventEnd: row.event.endAt,
+    location: row.event.location,
   });
+
+  try {
+    return await db.transaction(async (tx) => {
+      const [res] = await tx.insert(certificates).values({
+        registrationId,
+        certificateNumber,
+        filePath: ref,
+        issuedBy: actor.id,
+      });
+      await tx.insert(notifications).values({
+        userId: row.reg.userId,
+        eventId: row.event.id,
+        type: "certificate_issued",
+        message: `Sertifikat untuk "${row.event.title}" sudah tersedia.`,
+      });
+      return { id: res.insertId, certificateNumber };
+    });
+  } catch (e) {
+    await store
+      .remove(ref)
+      .catch((err) => console.error("Gagal membuang file sertifikat yatim:", ref, err));
+    if (isDuplicateError(e)) throw new AppError(409, "Sertifikat sudah diterbitkan");
+    throw e;
+  }
 }
 
-// Terbitkan sertifikat untuk semua peserta yang hadir dan belum punya sertifikat
+// Terbitkan sertifikat untuk semua peserta yang hadir dan belum punya sertifikat.
+// Diproses 4 sekaligus; ?limit= (opsional) membatasi jumlah per panggilan, `remaining` = sisanya.
 export async function issueCertificatesForEvent(
   actor: Actor,
   eventId: number,
-  render: CertificateRenderer,
+  store: CertificateStore,
+  opts: { limit?: number } = {},
 ) {
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
   if (!event) throw new AppError(404, "Acara tidak ditemukan");
@@ -403,22 +420,30 @@ export async function issueCertificatesForEvent(
       ),
     );
 
+  const batch = opts.limit ? pending.slice(0, opts.limit) : pending;
   let issued = 0;
   const failed: { registrationId: number; error: string }[] = [];
-  for (const r of pending) {
-    try {
-      await issueCertificate(actor, r.id, render);
-      issued++;
-    } catch (e) {
-      if (e instanceof AppError && e.status === 409) continue; // sudah terbit
-      console.error("Gagal menerbitkan sertifikat", r.id, e);
-      failed.push({
-        registrationId: r.id,
-        error: e instanceof AppError ? e.message : "Kesalahan server",
-      });
+
+  let next = 0;
+  const worker = async () => {
+    while (next < batch.length) {
+      const r = batch[next++];
+      try {
+        await issueCertificate(actor, r.id, store);
+        issued++;
+      } catch (e) {
+        if (e instanceof AppError && e.status === 409) continue; // sudah terbit
+        console.error("Gagal menerbitkan sertifikat", r.id, e);
+        failed.push({
+          registrationId: r.id,
+          error: e instanceof AppError ? e.message : "Kesalahan server",
+        });
+      }
     }
-  }
-  return { eligible: pending.length, issued, failed };
+  };
+  await Promise.all(Array.from({ length: Math.min(4, batch.length) }, worker));
+
+  return { eligible: pending.length, issued, failed, remaining: pending.length - batch.length };
 }
 
 // Unduh: pemilik sertifikat, penyelenggara acara, atau admin

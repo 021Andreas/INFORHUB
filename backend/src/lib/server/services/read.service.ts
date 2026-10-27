@@ -88,11 +88,7 @@ export async function getEventDetail(viewer: Actor | null, eventId: number) {
 export async function listMyRegistrations(userId: number) {
   const rows = await db
     .select({
-      registrationId: registrations.id,
-      status: registrations.status,
-      ticketCode: registrations.ticketCode,
-      registeredAt: registrations.registeredAt,
-      cancelledAt: registrations.cancelledAt,
+      id: registrations.id,
       eventId: events.id,
       title: events.title,
       posterUrl: events.posterUrl,
@@ -100,23 +96,46 @@ export async function listMyRegistrations(userId: number) {
       endAt: events.endAt,
       location: events.location,
       eventStatus: events.status,
+      registrationStatus: registrations.status,
+      ticketCode: registrations.ticketCode,
+      registeredAt: registrations.registeredAt,
+      cancelledAt: registrations.cancelledAt,
       certificateAvailable: events.certificateAvailable,
       attendanceStatus: attendance.status,
       checkedAt: attendance.checkedAt,
       certificateId: certificates.id,
+      certificateNumber: certificates.certificateNumber,
     })
     .from(registrations)
     .innerJoin(events, eq(events.id, registrations.eventId))
     .leftJoin(attendance, eq(attendance.registrationId, registrations.id))
     .leftJoin(certificates, eq(certificates.registrationId, registrations.id))
     .where(eq(registrations.userId, userId))
-    .orderBy(desc(registrations.registeredAt));
+    .orderBy(desc(registrations.registeredAt), desc(registrations.id));
 
   return rows.map((r) => ({
     ...r,
-    ticketCode: r.status === "registered" ? r.ticketCode : null,
+    ticketCode: r.registrationStatus === "registered" ? r.ticketCode : null,
     attendanceStatus: r.attendanceStatus ?? "absent",
   }));
+}
+
+/* ---------------- sertifikat milik user ---------------- */
+export async function listMyCertificates(userId: number) {
+  return db
+    .select({
+      id: certificates.id,
+      certificateNumber: certificates.certificateNumber,
+      issuedAt: certificates.issuedAt,
+      eventId: events.id,
+      eventTitle: events.title,
+      eventStartAt: events.startAt,
+    })
+    .from(certificates)
+    .innerJoin(registrations, eq(registrations.id, certificates.registrationId))
+    .innerJoin(events, eq(events.id, registrations.eventId))
+    .where(eq(registrations.userId, userId))
+    .orderBy(desc(certificates.issuedAt), desc(certificates.id));
 }
 
 /* ---------------- peserta & rekap kehadiran (penyelenggara/admin) ---------------- */

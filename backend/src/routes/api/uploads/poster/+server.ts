@@ -1,11 +1,11 @@
 import { env } from "$env/dynamic/private";
 import { AppError } from "$lib/server/services/event.service";
 import { requireRole, respond } from "$lib/server/http";
-import { MAX_POSTER_BYTES, savePoster } from "$lib/server/uploads/posters";
+import { MAX_POSTER_BYTES, posterSegment, savePoster } from "$lib/server/uploads/posters";
 import type { RequestHandler } from "./$types";
 
 // multipart/form-data, field 'file' (atau 'poster'). Maks 2 MB; PNG/JPG/WebP.
-// Mengembalikan { url } untuk diisi ke posterUrl saat membuat/mengedit acara.
+// Mengembalikan { url } (selalu diawali http) untuk diisi ke posterUrl acara.
 export const POST: RequestHandler = ({ request, locals, url }) =>
   respond(async () => {
     requireRole(locals, "penyelenggara", "admin");
@@ -23,7 +23,7 @@ export const POST: RequestHandler = ({ request, locals, url }) =>
     const file = form.get("file") ?? form.get("poster");
     if (!(file instanceof File)) throw new AppError(400, "Sertakan file gambar pada field 'file'");
 
-    const name = await savePoster(file);
+    const ref = await savePoster(file);
     const base = (env.PUBLIC_BASE_URL ?? url.origin).replace(/\/$/, "");
-    return { url: `${base}/api/uploads/poster/${name}` };
+    return { url: `${base}/api/uploads/poster/${posterSegment(ref)}` };
   }, 201);

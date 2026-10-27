@@ -1,11 +1,7 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { env } from "$env/dynamic/private";
+import { randomUUID } from "node:crypto";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { AppError, type CertificateData } from "$lib/server/services/event.service";
-
-// Folder penyimpanan PDF (di luar folder yang dilayani publik). Atur lewat CERT_DIR.
-const baseDir = () => path.resolve(env.CERT_DIR ?? "storage/certificates");
+import type { CertificateData, CertificateStore } from "$lib/server/services/event.service";
+import { storage } from "$lib/server/storage";
 
 // Font bawaan PDF hanya mendukung karakter Latin; karakter lain diganti '?'
 const safe = (s: string) => s.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, "?");
@@ -29,8 +25,8 @@ function drawCentered(
   page.drawText(t, { x: (width - font.widthOfTextAtSize(t, s)) / 2, y, size: s, font, color });
 }
 
-/** Membuat PDF, menyimpannya, dan mengembalikan nama file (disimpan di kolom file_path). */
-export async function renderCertificatePdf(data: CertificateData): Promise<string> {
+/** Membuat PDF sertifikat (hanya membuat byte-nya; penyimpanan ada di certificateStore). */
+export async function renderCertificatePdf(data: CertificateData): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([841.89, 595.28]); // A4 landscape
   const { width, height } = page.getSize();
@@ -58,20 +54,21 @@ export async function renderCertificatePdf(data: CertificateData): Promise<strin
   drawCentered(page, `Nomor: ${data.certificateNumber}`, 70, sans, 11, rgb(0.4, 0.4, 0.4));
   drawCentered(page, "InforHub", 52, sans, 11, rgb(0.4, 0.4, 0.4));
 
-  const fileName = `${data.certificateNumber}.pdf`;
-  await mkdir(baseDir(), { recursive: true });
-  await writeFile(path.join(baseDir(), fileName), await pdf.save());
-  return fileName;
+  return pdf.save();
 }
 
-/** Membaca PDF yang tersimpan. Menolak path di luar folder penyimpanan. */
-export async function readCertificateFile(filePath: string): Promise<Uint8Array> {
-  const base = baseDir();
-  const full = path.resolve(base, filePath);
-  if (!full.startsWith(base + path.sep)) throw new AppError(400, "Path file tidak valid");
-  try {
-    return await readFile(full);
-  } catch {
-    throw new AppError(404, "File sertifikat tidak ditemukan");
-  }
-}
+/**
+ * Penyimpanan sertifikat: lokal atau Google Drive sesuai STORAGE_DRIVER.
+ * Nama file diberi akhiran acak: bila dua permintaan serentak menerbitkan sertifikat yang sama,
+ * pembersihan file milik yang kalah tidak boleh menghapus file milik yang menang.
+ */
+export const certificateStore: CertificateStore = {
+  save: async (data) =>
+    storage.put(
+      "certificate",
+      `${data.certificateNumber}-${randomUUID().slice(0, 8)}.pdf`,
+      await renderCertificatePdf(data),
+      "application/pdf",
+    ),
+  remove: (ref) => storage.remove("certificate", ref),
+};
