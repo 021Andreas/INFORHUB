@@ -1,6 +1,8 @@
 
 <script lang="ts">
+  import Brand from "#lib/components/Brand.svelte";
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
   import { api } from "#lib/api.js";
 
   let name = $state("");
@@ -8,8 +10,16 @@
   let password = $state("");
   let confirmPassword = $state("");
   let showPassword = $state(false);
-  let acceptedTerms = $state(false);
   let error = $state("");
+
+  onMount(async () => {
+    try {
+      const result = await api<{ user: { role: string } }>("/api/auth/me");
+      goto(result.user.role === "mahasiswa" ? "/" : "/admin");
+    } catch {
+      // Belum login; formulir pendaftaran tetap ditampilkan.
+    }
+  });
 
   async function handleRegister(event: SubmitEvent) {
     event.preventDefault();
@@ -27,11 +37,6 @@
 
     if (password !== confirmPassword) {
       error = "Konfirmasi password tidak cocok.";
-      return;
-    }
-
-    if (!acceptedTerms) {
-      error = "Kamu harus menyetujui ketentuan penggunaan.";
       return;
     }
 
@@ -53,10 +58,7 @@
 </svelte:head>
 
 <main class="auth-page">
-  <a class="brand" href="/">
-    <span class="logo">▦</span>
-    <span>INFOR<span class="blue">HUB</span></span>
-  </a>
+  <Brand />
 
   <section class="auth-card">
     <h1>Buat akun baru</h1>
@@ -117,13 +119,6 @@
         required
       />
 
-      <label class="terms">
-        <input type="checkbox" bind:checked={acceptedTerms} />
-        <span>
-          Saya menyetujui ketentuan penggunaan dan kebijakan privasi INFORHUB.
-        </span>
-      </label>
-
       {#if error}
         <p class="error" role="alert">{error}</p>
       {/if}
@@ -141,32 +136,30 @@
 </main>
 
 <style>
-  :global(*) { box-sizing: border-box; }
+  :global(*) { box-sizing: border-box}
   :global(body) {
     margin: 0;
-    background: #0d1117;
-    color: #e6edf3;
-    font-family: Inter, "Segoe UI", sans-serif;
-  }
-  :global(input), :global(button) { font: inherit; }
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, "Segoe UI", sans-serif}
+  :global(input), :global(button) { font: inherit}
 
   .auth-page {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 28px 18px 18px;
-  }
+    padding: 28px 18px 18px}
 
+  .brand img { display:block; width:220px; max-width:80vw; height:auto; object-fit:contain}
   .brand {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: white;
+    color: var(--text);
     text-decoration: none;
     font-size: 23px;
-    font-weight: 850;
-  }
+    font-weight: 850}
 
   .logo {
     display: grid;
@@ -174,113 +167,104 @@
     width: 39px;
     height: 39px;
     border-radius: 10px;
-    background: #287cf0;
+    background: var(--accent);
     color: white;
-    font-size: 24px;
-  }
+    font-size: 24px}
 
-  .blue { color: #4898ff; }
+  .blue { color: var(--accent-text)}
 
   .auth-card {
     width: 100%;
     max-width: 440px;
     margin: 30px 0;
     padding: 29px 32px;
-    border: 1px solid #253443;
+    border: 1px solid var(--border);
     border-radius: 15px;
-    background: #121a23;
-  }
+    background: var(--surface)}
 
   .symbol {
     display: grid;
     place-items: center;
     width: 43px;
     height: 43px;
-    border: 1px solid #315a85;
+    border: 1px solid var(--accent);
     border-radius: 11px;
-    background: #172b40;
-    color: #72b6ff;
-    font-size: 27px;
-  }
+    background: var(--surface-3);
+    color: var(--accent-text);
+    font-size: 27px}
 
   .eyebrow {
     margin-top: 20px;
-    color: #65aaff;
+    color: var(--accent-text);
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: 1.4px;
-  }
+    letter-spacing: 1.4px}
 
-  h1 { margin: 8px 0; font-size: 26px; }
-  .subtitle { margin: 0 0 20px; color: #98a6b5; font-size: 12px; line-height: 1.8; }
+  h1 { margin: 8px 0; font-size: 26px}
+  .subtitle { margin: 0 0 20px; color: var(--muted); font-size: 12px; line-height: 1.8}
 
-  form { display: flex; flex-direction: column; gap: 9px; }
-  label { margin-top: 5px; color: #dce5ee; font-size: 12px; font-weight: 650; }
+  form { display: flex; flex-direction: column; gap: 9px}
+  label { margin-top: 5px; color: var(--text); font-size: 12px; font-weight: 650}
 
   input:not([type="checkbox"]) {
     width: 100%;
     min-width: 0;
     padding: 11px 13px;
-    border: 1px solid #304050;
+    border: 1px solid var(--border-strong);
     border-radius: 8px;
     outline: none;
-    background: #0d141c;
-    color: white;
-    font-size: 12px;
-  }
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 12px}
 
-  input:focus { border-color: #4898ff; }
-  input::placeholder { color: #667789; }
+  input:focus { border-color: var(--accent)}
+  input::placeholder { color: var(--muted)}
 
-  .password-field { position: relative; display: flex; align-items: center; }
-  .password-field input { padding-right: 78px !important; }
+  .password-field { position: relative; display: flex; align-items: center}
+  .password-field input { padding-right: 78px !important}
   .show-password {
     position: absolute;
     right: 10px;
     border: 0;
     background: transparent;
-    color: #78b8ff;
+    color: var(--accent-text);
     font-size: 11px;
-    cursor: pointer;
-  }
+    cursor: pointer}
 
   .terms {
     display: flex;
     align-items: flex-start;
     gap: 9px;
     margin: 12px 0;
-    color: #aab8c7;
+    color: var(--text-2);
     font-size: 11px;
     font-weight: 400;
-    line-height: 1.7;
-  }
+    line-height: 1.7}
 
   .terms input {
     flex-shrink: 0;
     margin-top: 3px;
-    accent-color: #287cf0;
-  }
+    accent-color: var(--accent)}
 
   .submit {
     padding: 13px;
     border: 0;
     border-radius: 8px;
-    background: #287cf0;
+    background: var(--accent);
     color: white;
     font-size: 13px;
     font-weight: 750;
-    cursor: pointer;
-  }
+    cursor: pointer}
 
-  .submit:hover { background: #398bff; }
-  .error { color: #ff9292; font-size: 11px; line-height: 1.6; }
-  .switch { margin: 21px 0 0; color: #98a6b5; text-align: center; font-size: 12px; }
-  .switch a { margin-left: 4px; color: #70b3ff; font-weight: 700; text-decoration: none; }
-  footer { margin-top: auto; padding: 10px 0; color: #667789; font-size: 10px; }
+  .submit:hover { background: var(--accent)}
+  .error { color: var(--err-text); font-size: 11px; line-height: 1.6}
+  .switch { margin: 21px 0 0; color: var(--muted); text-align: center; font-size: 12px}
+  .switch a { margin-left: 4px; color: var(--accent-text); font-weight: 700; text-decoration: none}
+  footer { margin-top: auto; padding: 10px 0; color: var(--muted); font-size: 10px}
 
   @media (max-width: 480px) {
-    .auth-page { padding: 22px 14px; }
-    .auth-card { margin: 24px 0; padding: 23px; }
-    h1 { font-size: 23px; }
+    .auth-page { padding: 22px 14px}
+    .auth-card { margin: 24px 0; padding: 23px}
+    h1 { font-size: 23px}
   }
 </style>

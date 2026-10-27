@@ -1,596 +1,445 @@
-
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { api } from "#lib/api.js";
+  import { onMount } from 'svelte';
+  import { api } from '#lib/api.js';
+  import Icon from '#lib/components/Icon.svelte';
 
   type EventItem = {
     id: number;
     title: string;
-    description: string;
-    organizer: string;
-    category: string;
-    date: string;
-    time: string;
-    location: string;
-    posterUrl: string;
-    registered: number;
-    quota: number;
-    status: string;
-  };
-
-  let searchQuery = $state("");
-  let activeCategory = $state("Semua");
-  let notice = $state(false);
-
-  // Bentuk data dari GET /api/events
-  type ApiEvent = {
-    id: number;
-    title: string;
+    description?: string | null;
     posterUrl: string | null;
-    categoryId: number | null;
     startAt: string;
+    endAt?: string | null;
     location: string;
     quota: number;
     registered: number;
+    category?: string | null;
+    organizer?: string | null;
   };
+  type Sort = 'untukmu' | 'terbaru' | 'populer' | 'segera' | 'tersimpan';
+
+  const tabs: { id: Sort; label: string }[] = [
+    { id: 'untukmu', label: 'Untuk kamu' },
+    { id: 'terbaru', label: 'Terbaru' },
+    { id: 'populer', label: 'Populer' },
+    { id: 'segera', label: 'Segera' },
+    { id: 'tersimpan', label: 'Tersimpan' }
+  ];
+  const PAGE = 8;
+  const SAVED_KEY = 'inforhub-saved';
 
   let events = $state<EventItem[]>([]);
+  let loading = $state(true);
+  let error = $state('');
+  let sort = $state<Sort>('untukmu');
+  let category = $state('Semua');
+  let visible = $state(PAGE);
+  let myCategories = $state<Record<string, number>>({});
+  let saved = $state<number[]>([]);
+  let toast = $state('');
 
-  // Backend belum mengirim description, organizer, dan nama kategori,
-  // jadi untuk sementara memakai nilai bawaan.
-  function toEventItem(e: ApiEvent): EventItem {
-    const start = new Date(e.startAt);
-    return {
-      id: e.id,
-      title: e.title,
-      description: "",
-      organizer: "Penyelenggara",
-      category: "Umum",
-      date: start.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-      time: start.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-      location: e.location,
-      posterUrl: e.posterUrl ?? "",
-      registered: e.registered,
-      quota: e.quota,
-      status: "Pendaftaran dibuka"
-    };
+  // Hanya acara yang belum selesai yang tampil di feed.
+  const live = $derived(
+    events.filter((e) => !e.endAt || new Date(e.endAt).getTime() >= Date.now())
+  );
+  const categories = $derived([
+    'Semua',
+    ...new Set(live.map((e) => e.category).filter((v): v is string => Boolean(v)))
+  ]);
+  const personalized = $derived(Object.keys(myCategories).length > 0);
+
+  // "Untuk kamu": kategori yang pernah diikuti, keramaian, dan kedekatan jadwal.
+  function score(e: EventItem) {
+    const fill = e.quota > 0 ? e.registered / e.quota : 0;
+    const days = (new Date(e.startAt).getTime() - Date.now()) / 86400000;
+    const soon = days >= 0 ? 1 / (1 + days / 7) : 0.5;
+    const affinity = e.category ? (myCategories[e.category] ?? 0) : 0;
+    const full = e.quota > 0 && e.registered >= e.quota ? 2 : 0;
+    return affinity * 3 + fill * 1.5 + soon - full;
   }
+
+  const feed = $derived.by(() => {
+    let list = live.filter((e) => category === 'Semua' || e.category === category);
+    if (sort === 'tersimpan') list = list.filter((e) => saved.includes(e.id));
+    const t = (e: EventItem) => new Date(e.startAt).getTime();
+    switch (sort) {
+      case 'terbaru':
+        return [...list].sort((a, b) => b.id - a.id);
+      case 'populer':
+        return [...list].sort((a, b) => b.registered - a.registered || t(a) - t(b));
+      case 'segera':
+        return [...list].sort((a, b) => t(a) - t(b));
+      case 'untukmu':
+        return [...list].sort((a, b) => score(b) - score(a));
+      default:
+        return list;
+    }
+  });
+  const shown = $derived(feed.slice(0, visible));
+  const upcoming = $derived([...live].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()).slice(0, 4));
 
   onMount(async () => {
     try {
-      const data = await api<ApiEvent[]>("/api/events");
-      events = data.map(toEventItem);
-    } catch (e) {
-      console.error("Gagal memuat acara:", e);
+      saved = JSON.parse(localStorage.getItem(SAVED_KEY) ?? '[]');
+    } catch {
+      saved = [];
     }
+
+    const [ev, reg] = await Promise.allSettled([
+      api<EventItem[] | { data: EventItem[] }>('/api/events'),
+      api<{ eventId: number }[]>('/api/me/registrations')
+    ]);
+
+    if (ev.status === 'fulfilled') {
+      events = Array.isArray(ev.value) ? ev.value : (ev.value.data ?? []);
+    } else {
+      error = ev.reason instanceof Error ? ev.reason.message : 'Acara belum dapat dimuat.';
+    }
+
+    // Riwayat pendaftaran (jika login) dipakai untuk personalisasi tab "Untuk kamu".
+    if (reg.status === 'fulfilled' && Array.isArray(reg.value)) {
+      const byId = new Map(events.map((e) => [e.id, e.category]));
+      const counts: Record<string, number> = {};
+      for (const r of reg.value) {
+        const c = byId.get(r.eventId);
+        if (c) counts[c] = (counts[c] ?? 0) + 1;
+      }
+      myCategories = counts;
+    }
+    loading = false;
   });
 
-  const categories = [
-    "Semua",
-    "Seminar",
-    "Workshop",
-    "Kompetisi",
-    "Webinar"
-  ];
+  function choose(next: Sort) {
+    sort = next;
+    visible = PAGE;
+  }
+  function chooseCategory(next: string) {
+    category = next;
+    visible = PAGE;
+  }
 
-  let filteredEvents = $derived(
-    events.filter((event) => {
-      const query = searchQuery.trim().toLowerCase();
+  // Muat lebih banyak otomatis saat pengguna mendekati akhir feed.
+  function sentinel(node: HTMLElement) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) visible += PAGE;
+      },
+      { rootMargin: '400px' }
+    );
+    io.observe(node);
+    return { destroy: () => io.disconnect() };
+  }
 
-      const matchesSearch =
-        !query ||
-        `${event.title} ${event.description} ${event.organizer} ${event.category}`
-          .toLowerCase()
-          .includes(query);
+  function toggleSave(id: number) {
+    saved = saved.includes(id) ? saved.filter((x) => x !== id) : [...saved, id];
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+    } catch {
+      // penyimpanan diblokir; tetap berlaku selama halaman terbuka
+    }
+  }
 
-      const matchesCategory =
-        activeCategory === "Semua" ||
-        event.category === activeCategory;
+  function flash(message: string) {
+    toast = message;
+    setTimeout(() => (toast = ''), 2200);
+  }
 
-      return matchesSearch && matchesCategory;
-    })
+  async function share(e: EventItem) {
+    const url = `${location.origin}/acara/${e.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: e.title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      flash('Tautan acara disalin');
+    } catch {
+      // dibatalkan pengguna
+    }
+  }
+
+  const startOfDay = (ms: number) => new Date(ms).setHours(0, 0, 0, 0);
+
+  function whenLabel(e: EventItem) {
+    const s = new Date(e.startAt).getTime();
+    if (Number.isNaN(s)) return 'Jadwal menyusul';
+    const end = e.endAt ? new Date(e.endAt).getTime() : s;
+    const now = Date.now();
+    if (now >= s && now <= end) return 'Sedang berlangsung';
+    const d = Math.round((startOfDay(s) - startOfDay(now)) / 86400000);
+    if (d <= 0) return 'Hari ini';
+    if (d === 1) return 'Besok';
+    if (d <= 14) return `${d} hari lagi`;
+    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(s);
+  }
+
+  function dateLabel(value: string) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime())
+      ? 'Jadwal menyusul'
+      : new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(d);
+  }
+
+  function badge(e: EventItem) {
+    if (e.quota > 0 && e.registered >= e.quota) return { text: 'Kuota penuh', tone: 'err' };
+    if (e.quota > 0 && (e.quota - e.registered) / e.quota <= 0.2) return { text: 'Hampir penuh', tone: 'warn' };
+    return null;
+  }
+
+  const pct = (e: EventItem) => (e.quota > 0 ? Math.min(100, Math.round((e.registered / e.quota) * 100)) : 0);
+  const initial = (name?: string | null) => (name ?? 'P').trim().charAt(0).toUpperCase();
+  const day = (v: string) => new Date(v).getDate();
+  const month = (v: string) => new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(v));
+
+  const subtitle = $derived(
+    sort === 'untukmu'
+      ? personalized
+        ? 'Disusun dari kategori acara yang pernah kamu ikuti.'
+        : 'Belum ada riwayat pendaftaran, jadi ini acara yang sedang ramai dan segera berlangsung.'
+      : sort === 'terbaru'
+        ? 'Acara yang paling baru dipublikasikan.'
+        : sort === 'populer'
+          ? 'Acara dengan pendaftar terbanyak.'
+          : sort === 'segera'
+            ? 'Urut berdasarkan jadwal terdekat.'
+            : 'Acara yang kamu simpan di perangkat ini.'
   );
 </script>
 
 <svelte:head>
   <title>INFORHUB — Temukan Acara</title>
-  <meta
-    name="description"
-    content="Temukan acara, seminar, workshop, dan kompetisi."
-  />
+  <meta name="description" content="Temukan seminar, workshop, dan kegiatan Informatika di INFORHUB." />
 </svelte:head>
 
-<div class="app">
-  <header class="topbar">
-    <a href="/" class="brand">
-      <span class="logo">▦</span>
-      <span>INFOR<span class="blue">HUB</span>
-        <small>Event Information Hub</small>
-      </span>
-    </a>
-
-    <input
-      class="search"
-      type="search"
-      placeholder="Cari acara, topik, atau penyelenggara..."
-      bind:value={searchQuery}
-      aria-label="Cari acara"
-    />
-
-    <div class="account-actions">
-      <a href="/login" class="login">Masuk</a>
-      <a href="/register" class="register">Daftar</a>
-    </div>
-  </header>
-
-  <aside class="sidebar">
-    <p class="label">MENU</p>
-    <a class="nav active" href="/">⌂ <span>Home</span></a>
-    <a class="nav" href="/acara">▦ <span>Acara</span></a>
-    <a class="nav" href="/pendaftaran">▤ <span>Pendaftaran Saya</span></a>
-    <a class="nav" href="/sertifikat">♙ <span>Sertifikat</span></a>
-
-    <hr />
-
-    <p class="label">INFORMASI</p>
-    <a class="nav" href="/bantuan">? <span>Bantuan</span></a>
-    <a class="nav" href="/tentang">ⓘ <span>Tentang INFORHUB</span></a>
-
-    <div class="sidebar-bottom">
-      <div class="logo">▦</div>
-      <strong>INFORHUB</strong>
-      <p>Temukan kegiatan, perluas wawasan, dan raih pengalaman baru.</p>
-    </div>
-  </aside>
-
-  <main class="feed">
-    <div class="heading">
-      <p class="eyebrow">EVENT DISCOVERY</p>
-      <h1>Temukan Acara</h1>
-      <p>Informasi kegiatan dan kesempatan baru dari berbagai penyelenggara.</p>
-    </div>
-
-    <div class="tabs">
-      <span class="tab-active">Untuk kamu</span>
-      <span>Terbaru</span>
-    </div>
-
-    <div class="categories">
-      {#each categories as category}
-        <button
-          class:chosen={activeCategory === category}
-          onclick={() => activeCategory = category}
-        >
-          {category}
-        </button>
-      {/each}
-    </div>
-
-    {#if notice}
-      <div class="notice">
-        Publikasi acara hanya tersedia untuk admin.
-        <button onclick={() => notice = false}>Tutup</button>
-      </div>
-    {/if}
-
-    {#if filteredEvents.length === 0}
-      <section class="empty">
-        <div class="empty-icon">▦</div>
-        <h2>
-          {searchQuery || activeCategory !== "Semua"
-            ? "Acara tidak ditemukan"
-            : "Belum ada acara"}
-        </h2>
-        <p>
-          {searchQuery || activeCategory !== "Semua"
-            ? "Coba kata kunci atau kategori lain."
-            : "Acara yang diterbitkan oleh admin akan muncul di sini."}
-        </p>
-
-        {#if searchQuery || activeCategory !== "Semua"}
-          <button onclick={() => {
-            searchQuery = "";
-            activeCategory = "Semua";
-          }}>
-            Reset filter
+<div class="layout">
+  <section class="feed" aria-label="Feed acara">
+    <div class="tabbar">
+      <div class="tabs" role="tablist" aria-label="Urutkan acara">
+        {#each tabs as tab (tab.id)}
+          <button role="tab" aria-selected={sort === tab.id} class:active={sort === tab.id} onclick={() => choose(tab.id)}>
+            {tab.label}
           </button>
-        {/if}
-      </section>
+        {/each}
+      </div>
+      <div class="chips" aria-label="Filter kategori">
+        {#each categories as item (item)}
+          <button class:chosen={category === item} onclick={() => chooseCategory(item)}>{item}</button>
+        {/each}
+      </div>
+    </div>
+
+    <p class="subtitle">{subtitle}</p>
+
+    {#if loading}
+      <div class="state"><div class="loader"></div><strong>Memuat acara</strong><p>Sedang mengambil informasi terbaru.</p></div>
+    {:else if error}
+      <div class="state">
+        <strong>Acara belum dapat dimuat</strong><p>{error}</p>
+        <button class="retry" onclick={() => location.reload()}>Coba lagi</button>
+      </div>
+    {:else if feed.length === 0}
+      <div class="state">
+        <strong>{sort === 'tersimpan' ? 'Belum ada acara tersimpan' : 'Acara tidak ditemukan'}</strong>
+        <p>
+          {sort === 'tersimpan'
+            ? 'Tekan ikon simpan pada acara untuk menaruhnya di sini.'
+            : category !== 'Semua'
+              ? 'Belum ada acara di kategori ini.'
+              : 'Acara resmi akan muncul di sini setelah diterbitkan pengelola.'}
+        </p>
+        {#if category !== 'Semua'}<button class="retry" onclick={() => chooseCategory('Semua')}>Lihat semua kategori</button>{/if}
+      </div>
     {:else}
-      {#each filteredEvents as event (event.id)}
-        <article class="event-card">
-          <div class="organizer">
-            <div class="avatar">
-              {event.organizer.slice(0, 1).toUpperCase()}
+      {#each shown as e (e.id)}
+        {@const b = badge(e)}
+        <article class="post">
+          <header class="post-head">
+            <span class="avatar">{initial(e.organizer)}</span>
+            <div class="who">
+              <strong>{e.organizer ?? 'Penyelenggara acara'}</strong>
+              <span>{e.category ?? 'Kegiatan'} · {whenLabel(e)}</span>
             </div>
-            <div>
-              <strong>{event.organizer}</strong>
-              <small>Penyelenggara · {event.category}</small>
-            </div>
-            <span class="admin-badge">ADMIN</span>
-          </div>
+            {#if b}<span class="chip {b.tone}">{b.text}</span>{/if}
+          </header>
 
-          <div class="poster">
-            {#if event.posterUrl}
-              <img src={event.posterUrl} alt={`Pamflet ${event.title}`} />
+          <a class="post-text" href={`/acara/${e.id}`}>
+            <h3>{e.title}</h3>
+            {#if e.description}<p>{e.description}</p>{/if}
+          </a>
+
+          <a class="media" href={`/acara/${e.id}`} aria-label={`Poster ${e.title}`}>
+            {#if e.posterUrl}
+              <img src={e.posterUrl} alt={`Poster ${e.title}`} loading="lazy" />
             {:else}
-              <div class="poster-placeholder">
-                <span>PAMFLET ACARA</span>
-                <h2>{event.title}</h2>
-              </div>
+              <div class="media-empty"><span>{e.category ?? 'INFORHUB EVENT'}</span></div>
             {/if}
+          </a>
+
+          <div class="facts">
+            <span><Icon name="calendar" size={15} />{dateLabel(e.startAt)}</span>
+            <span><Icon name="map-pin" size={15} />{e.location}</span>
           </div>
 
-          <div class="event-info">
-            <span class="event-category">{event.category}</span>
-            <h2>{event.title}</h2>
-            <p>{event.description}</p>
-            <p>▦ {event.date} · {event.time}</p>
-            <p>⌖ {event.location}</p>
-
+          {#if e.quota > 0}
             <div class="quota">
-              <span>Kuota peserta</span>
-              <strong>{event.registered} / {event.quota}</strong>
+              <div class="bar"><span style:width={`${pct(e)}%`}></span></div>
+              <small>{e.registered} dari {e.quota} kursi terisi</small>
             </div>
+          {/if}
 
-            <div class="progress">
-              <span
-                style={`width:${event.quota > 0
-                  ? Math.min(100, event.registered / event.quota * 100)
-                  : 0}%`}
-              ></span>
-            </div>
-
-            <p class="status">{event.status}</p>
-            <a class="detail-button" href={`/acara/${event.id}`}>
-              Lihat Detail Acara →
-            </a>
-          </div>
-
-          <div class="event-actions">
-            <span>♡ Suka</span>
-            <a href={`/acara/${event.id}`}>▢ Detail</a>
-            <span>↗ Bagikan</span>
-          </div>
+          <footer class="actions">
+            <a class="cta" href={`/acara/${e.id}`}>Lihat &amp; daftar</a>
+            <button
+              class="icon-action"
+              class:on={saved.includes(e.id)}
+              aria-pressed={saved.includes(e.id)}
+              aria-label={saved.includes(e.id) ? 'Hapus dari tersimpan' : 'Simpan acara'}
+              onclick={() => toggleSave(e.id)}
+            >
+              <Icon name="bookmark" size={18} />
+            </button>
+            <button class="icon-action" aria-label="Bagikan acara" onclick={() => share(e)}>
+              <Icon name="share" size={18} />
+            </button>
+          </footer>
         </article>
       {/each}
-    {/if}
 
-    <footer>© 2026 INFORHUB · Event Information Hub</footer>
-  </main>
-
-  <aside class="rightbar">
-    <section class="side-card">
-      <div class="card-heading">
-        <h3>Acara Mendatang</h3>
-        <a href="/acara">Lihat semua</a>
-      </div>
-
-      {#if events.length === 0}
-        <p class="muted">Belum ada acara mendatang.</p>
+      {#if visible < feed.length}
+        <div class="more" use:sentinel>
+          <button class="retry" onclick={() => (visible += PAGE)}>Tampilkan lebih banyak</button>
+        </div>
       {:else}
-        {#each events as event (event.id)}
-          <a class="upcoming" href={`/acara/${event.id}`}>
-            <span class="mini-poster">▦</span>
-            <span>
-              <strong>{event.title}</strong>
-              <small>{event.date}</small>
-              <small>{event.registered}/{event.quota} peserta</small>
-            </span>
+        <p class="end">Kamu sudah melihat semua acara.</p>
+      {/if}
+    {/if}
+  </section>
+
+  <aside class="side" aria-label="Ringkasan">
+    {#if upcoming.length}
+      <section class="widget">
+        <h2>Segera berlangsung</h2>
+        {#each upcoming as e (e.id)}
+          <a class="mini" href={`/acara/${e.id}`}>
+            <span class="date"><b>{day(e.startAt)}</b><small>{month(e.startAt)}</small></span>
+            <span class="mini-text"><strong>{e.title}</strong><small>{e.location}</small></span>
           </a>
         {/each}
-      {/if}
-    </section>
+      </section>
+    {/if}
 
-    <section class="side-card">
-      <h3>Kategori Acara</h3>
-      {#each categories.slice(1) as category, i}
-        <button
-          class="topic"
-          onclick={() => activeCategory = category}
-        >
-          <span class="topic-number">0{i + 1}</span>
-          <strong>{category}</strong>
-          <span>›</span>
-        </button>
-      {/each}
-    </section>
+    {#if categories.length > 1}
+      <section class="widget">
+        <h2>Jelajahi kategori</h2>
+        <div class="cat-list">
+          {#each categories.slice(1) as c (c)}
+            <button class:chosen={category === c} onclick={() => chooseCategory(c)}>
+              {c}<small>{live.filter((e) => e.category === c).length}</small>
+            </button>
+          {/each}
+        </div>
+      </section>
+    {/if}
 
-    <section class="join-card">
-      <p class="eyebrow">JANGAN KETINGGALAN</p>
-      <h2>Temukan acara yang cocok untukmu.</h2>
-      <p>Buat akun untuk mendaftar kegiatan dan mengakses sertifikat.</p>
-      <a href="/register" class="register join-button">Buat Akun</a>
-    </section>
+    <a class="all-link" href="/acara">Jelajahi semua acara <span>→</span></a>
   </aside>
 </div>
 
+{#if toast}<div class="toast" role="status">{toast}</div>{/if}
+
 <style>
-  :global(*) { box-sizing: border-box; }
+  .layout { display: grid; grid-template-columns: minmax(0, 680px) 300px; gap: 28px; justify-content: center; align-items: start; }
+  .feed { min-width: 0; }
 
-  :global(body) {
-    margin: 0;
-    background: #0d1117;
-    color: #e6edf3;
-    font-family: Inter, "Segoe UI", sans-serif;
-    font-size: 14px;
+  .tabbar { position: sticky; top: 82px; z-index: 20; margin: 0 0 4px; padding: 0 0 10px; background: var(--bg); }
+  .tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { position: relative; flex: 0 0 auto; padding: 14px 16px; border: 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 650; cursor: pointer; }
+  .tabs button:hover { color: var(--text); }
+  .tabs button.active { color: var(--text); }
+  .tabs button.active::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
+
+  .chips { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chips button { flex: 0 0 auto; padding: 7px 13px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 600; cursor: pointer; }
+  .chips button:hover { border-color: var(--border-strong); }
+  .chips button.chosen { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+
+  .subtitle { margin: 6px 4px 16px; color: var(--muted); font-size: 12px; }
+
+  .post { margin: 0 0 16px; padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+  .post-head { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+  .avatar { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-size: 15px; font-weight: 700; }
+  .who { display: grid; gap: 3px; min-width: 0; flex: 1; }
+  .who strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+  .who span { color: var(--muted); font-size: 11px; }
+  .chip { flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+  .chip.warn { background: var(--warn-bg); color: var(--warn-text); }
+  .chip.err { background: var(--err-bg); color: var(--err-text); }
+
+  .post-text { display: block; color: inherit; text-decoration: none; }
+  .post-text h3 { margin: 0 0 6px; font-size: 17px; line-height: 1.35; color: var(--text); }
+  .post-text p { display: -webkit-box; margin: 0 0 12px; overflow: hidden; color: var(--text-2); font-size: 13px; line-height: 1.6; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; }
+
+  .media { display: block; overflow: hidden; margin-top: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-3); }
+  .media img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  .media-empty { display: grid; place-items: center; aspect-ratio: 16 / 9; background: linear-gradient(135deg, var(--accent-soft), var(--surface-3)); }
+  .media-empty span { color: var(--accent-text); font-size: 15px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; color: var(--text-2); font-size: 12px; }
+  .facts span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  .facts :global(svg) { color: var(--muted); flex: 0 0 auto; }
+
+  .quota { margin-top: 12px; }
+  .bar { height: 6px; overflow: hidden; border-radius: 6px; background: var(--surface-3); }
+  .bar span { display: block; height: 100%; border-radius: 6px; background: var(--accent); }
+  .quota small { display: block; margin-top: 6px; color: var(--muted); font-size: 11px; }
+
+  .actions { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .cta { display: inline-flex; align-items: center; justify-content: center; flex: 1; min-height: 40px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
+  .cta:hover { filter: brightness(1.08); }
+  .icon-action { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-2); cursor: pointer; }
+  .icon-action:hover { border-color: var(--border-strong); color: var(--text); }
+  .icon-action.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+  .icon-action.on :global(svg) { fill: currentColor; }
+
+  .state { display: grid; justify-items: center; gap: 8px; padding: 54px 20px; border: 1px dashed var(--border-strong); border-radius: 16px; background: var(--surface); text-align: center; }
+  .state strong { font-size: 15px; }
+  .state p { margin: 0; color: var(--muted); font-size: 12px; }
+  .loader { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .retry { margin-top: 6px; padding: 9px 16px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface); color: var(--text); font-size: 12px; font-weight: 650; cursor: pointer; }
+  .more { display: grid; justify-items: center; padding: 8px 0 24px; }
+  .end { margin: 8px 0 28px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  .side { position: sticky; top: 112px; display: grid; gap: 16px; }
+  .widget { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+  .widget h2 { margin: 0 0 12px; font-size: 14px; }
+  .mini { display: flex; align-items: center; gap: 12px; padding: 9px 0; color: inherit; text-decoration: none; }
+  .mini + .mini { border-top: 1px solid var(--border); }
+  .date { display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 46px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); line-height: 1.1; }
+  .date b { font-size: 16px; }
+  .date small { font-size: 9px; font-weight: 700; text-transform: uppercase; }
+  .mini-text { display: grid; gap: 3px; min-width: 0; }
+  .mini-text strong { display: -webkit-box; overflow: hidden; font-size: 12px; line-height: 1.35; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+  .mini-text small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .mini:hover strong { color: var(--accent-text); }
+  .cat-list { display: grid; gap: 4px; }
+  .cat-list button { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 12px; text-align: left; cursor: pointer; }
+  .cat-list button:hover { background: var(--surface-3); }
+  .cat-list button.chosen { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
+  .cat-list small { color: var(--muted); font-size: 11px; }
+  .all-link { display: flex; justify-content: space-between; padding: 13px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--accent-text); font-size: 12px; font-weight: 700; text-decoration: none; }
+
+  .toast { position: fixed; left: 50%; bottom: 26px; z-index: 90; transform: translateX(-50%); padding: 11px 18px; border-radius: 10px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 600; box-shadow: 0 10px 30px #0004; }
+
+  @media (max-width: 1080px) {
+    .layout { grid-template-columns: minmax(0, 680px); }
+    .side { display: none; }
   }
-
-  :global(button), :global(input) { font: inherit; }
-  :global(button) { cursor: pointer; }
-
-  .app {
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: 220px minmax(0, 800px) 270px;
-    grid-template-rows: 72px 1fr;
-    justify-content: center;
-  }
-
-  .topbar {
-    grid-column: 1 / -1;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    padding: 0 24px;
-    border-bottom: 1px solid #25303b;
-    background: #0d1117;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 275px;
-    color: white;
-    text-decoration: none;
-    font-size: 22px;
-    font-weight: 850;
-  }
-
-  .brand small {
-    display: block;
-    margin-top: 4px;
-    color: #96a4b3;
-    font-size: 10px;
-    font-weight: 400;
-  }
-
-  .logo {
-    display: grid;
-    place-items: center;
-    width: 39px;
-    height: 39px;
-    border-radius: 9px;
-    background: #287cf0;
-    color: white;
-    font-size: 24px;
-  }
-
-  .blue { color: #4898ff; }
-
-  .search {
-    flex: 1;
-    min-width: 0;
-    padding: 12px 15px;
-    border: 1px solid #293847;
-    border-radius: 9px;
-    outline: none;
-    background: #18222d;
-    color: white;
-  }
-
-  .account-actions { display: flex; gap: 9px; }
-  .login, .register {
-    padding: 11px 17px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .login { color: #e6edf3; border: 1px solid #304050; }
-  .register { color: white; background: #287cf0; }
-
-  .sidebar {
-    position: sticky;
-    top: 72px;
-    height: calc(100vh - 72px);
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    padding: 25px 12px;
-    border-right: 1px solid #25303b;
-  }
-
-  .label, .eyebrow {
-    color: #65aaff;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.3px;
-  }
-  .label { margin: 0 12px 8px; color: #748494; }
-
-  .nav {
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    padding: 12px;
-    border-radius: 8px;
-    color: #bdc8d4;
-    text-decoration: none;
-  }
-  .nav:hover, .nav.active { background: #172b43; color: #65aaff; }
-  .nav { font-size: 19px; }
-  .nav span { font-size: 13px; }
-  .sidebar hr { width: 100%; margin: 15px 0; border: 0; border-top: 1px solid #25303b; }
-
-  .sidebar-bottom {
-    margin-top: auto;
-    padding: 14px;
-    border: 1px solid #25303b;
-    border-radius: 10px;
-    background: #121a23;
-  }
-  .sidebar-bottom strong { display: block; margin-top: 10px; }
-  .sidebar-bottom p { color: #98a6b5; font-size: 11px; line-height: 1.7; }
-
-  .feed { min-width: 0; padding: 28px 20px 45px; }
-  .heading h1 { margin: 8px 0; font-size: 27px; }
-  .heading p:last-child { color: #98a6b5; font-size: 12px; line-height: 1.6; }
-
-  .tabs {
-    display: flex;
-    align-items: center;
-    gap: 23px;
-    margin-top: 23px;
-    border-bottom: 1px solid #25303b;
-  }
-  .tabs span { padding: 13px 2px; color: #aab7c5; }
-  .tabs .tab-active { border-bottom: 2px solid #398bff; color: white; }
-  .tabs button {
-    margin-left: auto;
-    border: 0;
-    background: none;
-    color: #65aaff;
-  }
-
-  .categories { display: flex; gap: 8px; overflow-x: auto; padding: 14px 0; }
-  .categories button {
-    padding: 7px 12px;
-    border: 1px solid #2b3948;
-    border-radius: 20px;
-    background: #131c25;
-    color: #a9b6c4;
-    white-space: nowrap;
-  }
-  .categories button.chosen { background: #172c42; border-color: #347fce; color: #7ebaff; }
-
-  .notice {
-    margin: 12px 0;
-    padding: 13px;
-    border: 1px solid #315b85;
-    border-radius: 8px;
-    background: #14273a;
-  }
-  .notice button { float: right; border: 0; background: none; color: white; }
-
-  .event-card, .side-card, .join-card, .empty {
-    margin-bottom: 15px;
-    overflow: hidden;
-    border: 1px solid #253443;
-    border-radius: 11px;
-    background: #121a23;
-  }
-
-  .organizer { display: flex; align-items: center; gap: 10px; padding: 14px; }
-  .avatar {
-    display: grid;
-    place-items: center;
-    width: 37px;
-    height: 37px;
-    border-radius: 50%;
-    background: #1c3d61;
-    color: #a7d2ff;
-    font-weight: 800;
-  }
-  .organizer small { display: block; margin-top: 4px; color: #8797a7; font-size: 10px; }
-  .admin-badge { margin-left: auto; color: #72b6ff; font-size: 9px; font-weight: 800; }
-
-  .poster { margin: 0 14px; overflow: hidden; border-radius: 8px; }
-  .poster img { display: block; width: 100%; max-height: 460px; object-fit: contain; background: #080d13; }
-  .poster-placeholder {
-    display: flex;
-    min-height: 280px;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 25px;
-    background: linear-gradient(145deg, #06182f, #0b3b70, #071426);
-    color: white;
-    text-align: center;
-  }
-  .poster-placeholder span { color: #80bdff; font-size: 10px; letter-spacing: 2px; }
-  .poster-placeholder h2 { font-size: 30px; }
-
-  .event-info { padding: 17px; }
-  .event-category { color: #69afff; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-  .event-info h2 { margin: 8px 0; font-size: 19px; }
-  .event-info p { color: #b1bdc9; font-size: 12px; line-height: 1.7; }
-  .quota { display: flex; justify-content: space-between; color: #98a6b5; font-size: 11px; }
-  .quota strong { color: white; }
-  .progress { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 8px; background: #293746; }
-  .progress span { display: block; height: 100%; background: #398bff; }
-  .status { color: #63dda7 !important; }
-  .detail-button { display: block; margin-top: 15px; padding: 12px; border-radius: 8px; background: #287cf0; color: white; text-align: center; text-decoration: none; font-weight: 700; }
-
-  .event-actions { display: flex; justify-content: space-around; padding: 13px; border-top: 1px solid #25313c; color: #9ba9b7; font-size: 11px; }
-  .event-actions a { color: inherit; text-decoration: none; }
-
-  .empty { padding: 55px 20px; text-align: center; }
-  .empty-icon { color: #65aaff; font-size: 36px; }
-  .empty p { color: #98a6b5; font-size: 12px; line-height: 1.7; }
-  .empty button { padding: 9px 13px; border: 0; border-radius: 7px; background: #287cf0; color: white; }
-
-  .rightbar { padding: 28px 15px 35px 0; }
-  .side-card, .join-card { padding: 17px; }
-  .card-heading { display: flex; justify-content: space-between; gap: 8px; }
-  .card-heading h3, .side-card h3 { margin-top: 0; font-size: 13px; }
-  .card-heading a { color: #65aaff; font-size: 10px; text-decoration: none; }
-  .muted { color: #8797a7; font-size: 11px; line-height: 1.7; }
-  .upcoming { display: flex; gap: 10px; padding: 12px 0; border-top: 1px solid #25313c; color: white; text-decoration: none; }
-  .mini-poster { display: grid; place-items: center; width: 48px; height: 58px; flex-shrink: 0; border-radius: 6px; background: #0b3b70; color: #7bc0ff; font-size: 24px; }
-  .upcoming strong, .upcoming small { display: block; margin-bottom: 5px; font-size: 10px; }
-  .upcoming small { color: #9aa9b8; }
-  .topic { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 0; border: 0; border-top: 1px solid #25313c; background: none; color: #dce7f2; text-align: left; }
-  .topic-number { color: #65aaff; }
-  .topic strong { flex: 1; }
-  .join-card { background: linear-gradient(145deg, #172b40, #111a25); }
-  .join-card h2 { font-size: 18px; line-height: 1.4; }
-  .join-card p { color: #a8b7c6; font-size: 11px; line-height: 1.7; }
-  .join-button { display: block; margin-top: 15px; text-align: center; }
-
-  footer { padding: 22px 0; color: #667484; text-align: center; font-size: 10px; }
-
-  @media (max-width: 1200px) {
-    .app { grid-template-columns: 200px minmax(0, 800px); }
-    .rightbar { display: none; }
-  }
-
   @media (max-width: 720px) {
-    .app { display: block; padding-bottom: 65px; }
-    .topbar { height: 62px; gap: 10px; padding: 0 10px; }
-    .brand { width: auto; font-size: 16px; }
-    .brand .logo { width: 30px; height: 30px; font-size: 19px; }
-    .brand small { font-size: 8px; }
-    .search { max-width: 160px; padding: 9px; font-size: 11px; }
-    .login { display: none; }
-    .register { padding: 9px; font-size: 11px; }
-    .sidebar {
-      position: fixed;
-      z-index: 10;
-      top: auto;
-      bottom: 0;
-      width: 100%;
-      height: 62px;
-      flex-direction: row;
-      justify-content: space-around;
-      padding: 5px;
-      border-top: 1px solid #25303b;
-      background: #0d1117;
-    }
-    .sidebar .label, .sidebar hr, .sidebar-bottom { display: none; }
-    .nav { flex: 1; flex-direction: column; justify-content: center; gap: 3px; padding: 4px 0; font-size: 17px; }
-    .nav span { font-size: 9px; }
-    .feed { padding: 22px 10px; }
-    .heading h1 { font-size: 24px; }
-    .heading p:last-child { font-size: 11px; }
-    .tabs { gap: 13px; }
-    .tabs span, .tabs button { font-size: 10px; }
-    .event-info h2 { font-size: 17px; }
-    .poster-placeholder { min-height: 230px; }
-    .poster-placeholder h2 { font-size: 25px; }
+    .tabbar { top: 70px; }
+    .post { padding: 14px; border-radius: 14px; }
+    .post-text h3 { font-size: 16px; }
   }
 </style>

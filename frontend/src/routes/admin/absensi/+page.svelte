@@ -1,6 +1,7 @@
 <script lang="ts">
   import QRCode from 'qrcode';
   import { api } from '#lib/api.js';
+  import Icon from '#lib/components/Icon.svelte';
 
   let selectedEventId = $state('');
   let showFullscreen = $state(false);
@@ -142,7 +143,7 @@
     <section class:fullscreen={showFullscreen} class="qr-panel">
       {#if showFullscreen}
         <button class="close-fullscreen" onclick={toggleFullscreen}>
-          ✕ Tutup layar penuh
+          <Icon name="close" size={16}/> Tutup layar penuh
         </button>
       {/if}
 
@@ -160,7 +161,7 @@
         </div>
       {:else}
         <div class="qr-placeholder">
-          <span class="qr-icon">▦</span>
+          <span class="qr-icon"><Icon name="qr" size={22}/></span>
           <strong>{qrLoading ? 'Memuat QR Code...' : 'QR Code belum tersedia'}</strong>
           <p>{qrError || 'QR Code akan ditampilkan setelah sesi absensi dimuat.'}</p>
         </div>
@@ -187,7 +188,7 @@
     </section>
   {:else}
     <section class="panel empty-state">
-      <div class="empty-icon">▦</div>
+      <div class="empty-icon"><Icon name="qr" size={25}/></div>
       <h2>Belum ada acara dipilih</h2>
       <p>Pilih acara di atas untuk melihat QR Code dan ringkasan kehadiran.</p>
     </section>
@@ -230,64 +231,64 @@
 </section>
 
 <style>
-  .page { max-width: 1200px; margin: auto; color: #e7edf7; }
-  .heading { margin-bottom: 22px; }
-  .breadcrumb { margin-bottom: 9px; color: #7f94ad; font-size: 11px; }
-  h1 { margin: 0 0 7px; font-size: 27px; }
-  .heading > div > p { margin: 0; color: #91a2b8; font-size: 12px; line-height: 1.6; }
+  .page { max-width: 1200px; margin: auto; color: var(--text)}
+  .heading { margin-bottom: 22px}
+  .breadcrumb { margin-bottom: 9px; color: var(--muted); font-size: 11px}
+  h1 { margin: 0 0 7px; font-size: 27px}
+  .heading > div > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6}
 
-  .panel { margin-bottom: 17px; border: 1px solid #223145; border-radius: 11px; background: #0d1722; }
-  .event-selector { display: grid; gap: 10px; padding: 19px; }
-  .event-selector label { font-size: 12px; font-weight: 650; }
-  .event-selector select { width: 100%; padding: 12px; border: 1px solid #2a3b50; border-radius: 8px; background: #101c29; color: #e7edf7; font-size: 12px; }
-  .event-selector p { margin: 0; color: #8296ae; font-size: 10px; }
+  .panel { margin-bottom: 17px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2)}
+  .event-selector { display: grid; gap: 10px; padding: 19px}
+  .event-selector label { font-size: 12px; font-weight: 650}
+  .event-selector select { width: 100%; padding: 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px}
+  .event-selector p { margin: 0; color: var(--muted); font-size: 10px}
 
-  .qr-panel { display: flex; align-items: center; flex-direction: column; padding: 28px; text-align: center; }
-  .event-info h2 { margin: 12px 0 8px; font-size: 22px; }
-  .event-info p { margin: 5px 0; color: #9bacc1; font-size: 12px; }
-  .event-badge { display: inline-block; padding: 6px 10px; border-radius: 20px; background: #123352; color: #7dbaff; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+  .qr-panel { display: flex; align-items: center; flex-direction: column; padding: 28px; text-align: center}
+  .event-info h2 { margin: 12px 0 8px; font-size: 22px}
+  .event-info p { margin: 5px 0; color: var(--muted); font-size: 12px}
+  .event-badge { display: inline-block; padding: 6px 10px; border-radius: 20px; background: var(--accent-soft); color: var(--accent-text); font-size: 10px; font-weight: 700; letter-spacing: 1px}
 
-  .qr-placeholder { display: flex; align-items: center; flex-direction: column; justify-content: center; width: min(100%, 300px); min-height: 270px; gap: 12px; margin: 25px 0; padding: 22px; border: 1px dashed #3a506b; border-radius: 12px; background: #101c29; }
-  .qr-icon { color: #7da9d9; font-size: 55px; }
-  .qr-placeholder strong { font-size: 13px; }
-  .qr-placeholder p { margin: 0; color: #91a2b8; font-size: 11px; line-height: 1.6; }
+  .qr-placeholder { display: flex; align-items: center; flex-direction: column; justify-content: center; width: min(100%, 300px); min-height: 270px; gap: 12px; margin: 25px 0; padding: 22px; border: 1px dashed var(--border-strong); border-radius: 12px; background: var(--surface)}
+  .qr-icon { color: var(--accent-text); font-size: 55px}
+  .qr-placeholder strong { font-size: 13px}
+  .qr-placeholder p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6}
 
-  .qr-box { display: flex; align-items: center; flex-direction: column; gap: 10px; margin: 25px 0; }
-  .qr-box img { display: block; width: min(100%, 300px); aspect-ratio: 1; padding: 10px; border-radius: 12px; background: #fff; image-rendering: pixelated; }
-  .qr-timer { margin: 0; color: #91a2b8; font-size: 11px; }
+  .qr-box { display: flex; align-items: center; flex-direction: column; gap: 10px; margin: 25px 0}
+  .qr-box img { display: block; width: min(100%, 300px); aspect-ratio: 1; padding: 10px; border-radius: 12px; background: var(--surface); image-rendering: pixelated}
+  .qr-timer { margin: 0; color: var(--muted); font-size: 11px}
 
-  .attendance-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; max-width: 600px; margin-bottom: 22px; border: 1px solid #243449; border-radius: 10px; }
-  .attendance-stats div { display: grid; gap: 8px; padding: 17px 8px; }
-  .attendance-stats div + div { border-left: 1px solid #243449; }
-  .attendance-stats span { color: #91a2b8; font-size: 10px; }
-  .attendance-stats strong { font-size: 24px; }
+  .attendance-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; max-width: 600px; margin-bottom: 22px; border: 1px solid var(--border); border-radius: 10px}
+  .attendance-stats div { display: grid; gap: 8px; padding: 17px 8px}
+  .attendance-stats div + div { border-left: 1px solid var(--border)}
+  .attendance-stats span { color: var(--muted); font-size: 10px}
+  .attendance-stats strong { font-size: 24px}
 
-  .primary-button { padding: 12px 18px; border: 0; border-radius: 8px; background: #247cf4; color: white; font-size: 12px; font-weight: 650; cursor: pointer; }
-  .primary-button:hover { background: #408fff; }
+  .primary-button { padding: 12px 18px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; font-weight: 650; cursor: pointer}
+  .primary-button:hover { background: var(--accent)}
 
-  .empty-state { display: flex; align-items: center; flex-direction: column; padding: 50px 20px; text-align: center; }
-  .empty-icon { margin-bottom: 12px; color: #6f86a2; font-size: 45px; }
-  .empty-state h2 { margin: 0 0 8px; font-size: 15px; }
-  .empty-state p { max-width: 370px; margin: 0; color: #91a2b8; font-size: 12px; line-height: 1.6; }
+  .empty-state { display: flex; align-items: center; flex-direction: column; padding: 50px 20px; text-align: center}
+  .empty-icon { margin-bottom: 12px; color: var(--muted); font-size: 45px}
+  .empty-state h2 { margin: 0 0 8px; font-size: 15px}
+  .empty-state p { max-width: 370px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6}
 
-  .instructions { padding: 21px; }
-  .instructions h2 { margin: 0 0 22px; font-size: 15px; }
-  .steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
-  .step { display: flex; align-items: flex-start; gap: 12px; }
-  .step > span { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px; background: #142c4a; color: #7dbaff; font-size: 11px; font-weight: 700; }
-  .step strong { font-size: 12px; }
-  .step p { margin: 6px 0 0; color: #91a2b8; font-size: 11px; line-height: 1.6; }
+  .instructions { padding: 21px}
+  .instructions h2 { margin: 0 0 22px; font-size: 15px}
+  .steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px}
+  .step { display: flex; align-items: flex-start; gap: 12px}
+  .step > span { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-text); font-size: 11px; font-weight: 700}
+  .step strong { font-size: 12px}
+  .step p { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6}
 
-  .fullscreen { position: fixed; inset: 0; z-index: 200; display: flex; justify-content: center; overflow-y: auto; margin: 0; border: 0; border-radius: 0; background: #080f18; }
-  .fullscreen .event-info h2 { font-size: clamp(24px, 4vw, 40px); }
-  .fullscreen .qr-placeholder { width: min(70vw, 400px); min-height: 300px; }
-  .fullscreen .qr-box img { width: min(70vw, 60vh, 480px); }
-  .close-fullscreen { align-self: flex-end; margin-bottom: 20px; padding: 10px 14px; border: 1px solid #30445c; border-radius: 8px; background: #152337; color: #d8e5f5; cursor: pointer; }
+  .fullscreen { position: fixed; inset: 0; z-index: 200; display: flex; justify-content: center; overflow-y: auto; margin: 0; border: 0; border-radius: 0; background: var(--bg)}
+  .fullscreen .event-info h2 { font-size: clamp(24px, 4vw, 40px)}
+  .fullscreen .qr-placeholder { width: min(70vw, 400px); min-height: 300px}
+  .fullscreen .qr-box img { width: min(70vw, 60vh, 480px)}
+  .close-fullscreen { align-self: flex-end; margin-bottom: 20px; padding: 10px 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-3); color: var(--text); cursor: pointer}
 
   @media (max-width: 600px) {
-    .qr-panel { padding: 20px 14px; }
-    .attendance-stats span { font-size: 9px; }
-    .attendance-stats strong { font-size: 20px; }
-    .steps { grid-template-columns: 1fr; }
+    .qr-panel { padding: 20px 14px}
+    .attendance-stats span { font-size: 9px}
+    .attendance-stats strong { font-size: 20px}
+    .steps { grid-template-columns: 1fr}
   }
 </style>

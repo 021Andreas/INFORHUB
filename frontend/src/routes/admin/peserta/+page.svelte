@@ -2,6 +2,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api } from '#lib/api.js';
+  import Icon from '#lib/components/Icon.svelte';
 
   type RegistrationStatus = 'registered' | 'cancelled';
 
@@ -139,7 +140,7 @@
 
   <div class="stats-grid">
     <article class="stat-card">
-      <span class="stat-icon blue">♙</span>
+      <span class="stat-icon blue"><Icon name="users" size={19}/></span>
       <div>
         <p>Total pendaftaran</p>
         <strong>{participants.length}</strong>
@@ -147,7 +148,7 @@
     </article>
 
     <article class="stat-card">
-      <span class="stat-icon green">✓</span>
+      <span class="stat-icon green"><Icon name="check" size={19}/></span>
       <div>
         <p>Terdaftar</p>
         <strong>{participants.filter(p => p.status === 'registered').length}</strong>
@@ -155,7 +156,7 @@
     </article>
 
     <article class="stat-card">
-      <span class="stat-icon red">×</span>
+      <span class="stat-icon red"><Icon name="close" size={19}/></span>
       <div>
         <p>Dibatalkan</p>
         <strong>{participants.filter(p => p.status === 'cancelled').length}</strong>
@@ -174,7 +175,7 @@
 
     <div class="filters">
       <label class="search-box">
-        <span>⌕</span>
+        <Icon name="search" size={18}/>
         <input
           bind:value={search}
           type="search"
@@ -247,7 +248,7 @@
       </div>
     {:else}
       <div class="empty-state">
-        <div class="empty-icon">♙</div>
+        <div class="empty-icon"><Icon name="users" size={24}/></div>
         <h3>
           {search || eventFilter !== 'all' || statusFilter !== 'all'
             ? 'Peserta tidak ditemukan'
@@ -289,7 +290,7 @@
           <h2 id="detail-title">Detail Pendaftaran</h2>
           <p>Informasi peserta dan acara yang dipilih.</p>
         </div>
-        <button class="close-button" aria-label="Tutup" onclick={() => selectedParticipant = null}>×</button>
+        <button class="close-button" aria-label="Tutup" onclick={() => selectedParticipant = null}><Icon name="close" size={17}/></button>
       </div>
 
       <dl>
@@ -315,61 +316,61 @@
 {/if}
 
 <style>
-  .participants-page { max-width: 1600px; margin: auto; color: #e7edf7; }
-  .page-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 23px; }
-  .breadcrumb { color: #7f94ad; font-size: 11px; margin-bottom: 9px; }
-  h1 { margin: 0 0 6px; font-size: 27px; }
-  .page-heading p, .panel-heading p, .modal-heading p { margin: 0; color: #91a2b8; font-size: 12px; line-height: 1.5; }
-  button, input, select { font: inherit; }
-  button { cursor: pointer; }
-  button:disabled { cursor: not-allowed; opacity: .45; }
-  .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border: 1px solid #2a3b50; border-radius: 8px; background: #111d2b; color: #c7d6e9; font-size: 11px; }
-  .secondary-button:hover:not(:disabled) { border-color: #438bdf; color: white; }
-  .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-bottom: 17px; }
-  .stat-card { display: flex; align-items: center; gap: 13px; padding: 18px; border: 1px solid #25364a; border-radius: 10px; background: #0d1722; }
-  .stat-icon { display: grid; place-items: center; flex-shrink: 0; width: 43px; height: 43px; border-radius: 10px; font-size: 23px; }
-  .stat-icon.blue { color: #73b5ff; background: #142e4d; }
-  .stat-icon.green { color: #5cdbb1; background: #12362e; }
-  .stat-icon.red { color: #ff929f; background: #3a2229; }
-  .stat-card p { margin: 0 0 6px; color: #9bacc1; font-size: 11px; }
-  .stat-card strong { font-size: 24px; }
-  .panel { overflow: hidden; border: 1px solid #223145; border-radius: 11px; background: #0d1722; }
-  .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 20px 17px; }
-  .panel-heading h2, .modal-heading h2 { margin: 0 0 6px; font-size: 15px; }
-  .count-badge { padding: 7px 9px; border: 1px solid #2a3b50; border-radius: 7px; color: #b7c8dd; font-size: 10px; white-space: nowrap; }
-  .filters { display: flex; gap: 10px; padding: 0 20px 17px; }
-  .search-box { display: flex; align-items: center; flex: 1; gap: 10px; min-width: 120px; padding: 0 12px; border: 1px solid #2a3b50; border-radius: 8px; background: #101c29; color: #9db0c7; }
-  .search-box > span { font-size: 22px; }
-  .search-box input { width: 100%; min-width: 0; padding: 11px 0; border: 0; outline: 0; background: transparent; color: #edf4ff; font-size: 11px; }
-  .search-box input::placeholder { color: #7f92aa; }
-  .filters select { max-width: 200px; padding: 0 10px; border: 1px solid #2a3b50; border-radius: 8px; background: #101c29; color: #cbd7e7; font-size: 11px; }
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
-  th { padding: 13px 16px; background: #101b28; color: #8fa1b8; font-size: 10px; font-weight: 600; }
-  td { padding: 13px 16px; border-top: 1px solid #1e2c3d; color: #b8c7d9; font-size: 11px; }
-  .participant-cell { display: flex; align-items: center; gap: 10px; }
-  .avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #1c3d65; color: #a4ceff; font-weight: 700; }
-  .identity { display: grid; gap: 4px; }
-  .identity strong { color: #e4ecf8; font-size: 11px; }
-  .identity span { color: #8ea1b8; font-size: 10px; }
-  code { color: #9ecbff; font-family: ui-monospace, monospace; font-size: 10px; }
-  .status { display: inline-block; padding: 5px 8px; border-radius: 20px; font-size: 10px; }
-  .status.registered { background: #12352d; color: #53d6a7; }
-  .status.cancelled { background: #3a2027; color: #ff8c9a; }
-  .detail-button { padding: 7px 10px; border: 1px solid #30445c; border-radius: 6px; background: #152337; color: #78b4ff; font-size: 10px; }
-  .empty-state { display: flex; min-height: 290px; align-items: center; justify-content: center; flex-direction: column; padding: 30px; text-align: center; }
-  .empty-icon { margin-bottom: 10px; color: #6f86a2; font-size: 42px; }
-  .empty-state h3 { margin: 0 0 7px; font-size: 15px; }
-  .empty-state p { max-width: 360px; margin: 0 0 15px; color: #91a2b8; font-size: 12px; line-height: 1.6; }
-  .panel-footer { padding: 13px 18px; border-top: 1px solid #1e2c3d; color: #8093aa; font-size: 10px; }
-  .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: #02060bd9; }
-  .detail-modal { width: 100%; max-width: 480px; padding: 22px; border: 1px solid #2a3b50; border-radius: 13px; background: #0d1722; box-shadow: 0 20px 80px #0008; }
-  .modal-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
-  .close-button { align-self: flex-start; border: 0; background: transparent; color: #b5c5d9; font-size: 25px; }
-  dl { display: grid; grid-template-columns: 140px 1fr; gap: 13px 10px; margin: 0 0 24px; }
-  dt { color: #91a2b8; font-size: 11px; }
-  dd { margin: 0; overflow-wrap: anywhere; color: #e1eaf6; font-size: 11px; }
-  .primary-button { padding: 10px 14px; border: 0; border-radius: 8px; background: #247cf4; color: white; font-size: 11px; }
-  @media (max-width: 760px) { .filters { flex-wrap: wrap; } .search-box { flex-basis: 100%; } .filters select { flex: 1; max-width: none; min-height: 38px; } }
-  @media (max-width: 520px) { .page-heading { align-items: flex-start; flex-direction: column; } .stats-grid { grid-template-columns: 1fr; } .panel-heading { padding: 16px; } .filters { padding: 0 16px 16px; } dl { grid-template-columns: 1fr; gap: 5px; } dd { margin-bottom: 9px; } }
+  .participants-page { max-width: 1600px; margin: auto; color: var(--text)}
+  .page-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 23px}
+  .breadcrumb { color: var(--muted); font-size: 11px; margin-bottom: 9px}
+  h1 { margin: 0 0 6px; font-size: 27px}
+  .page-heading p, .panel-heading p, .modal-heading p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5}
+  button, input, select { font: inherit}
+  button { cursor: pointer}
+  button:disabled { cursor: not-allowed; opacity: .45}
+  .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 11px}
+  .secondary-button:hover:not(:disabled) { border-color: var(--accent); color: var(--text)}
+  .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-bottom: 17px}
+  .stat-card { display: flex; align-items: center; gap: 13px; padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2)}
+  .stat-icon { display: grid; place-items: center; flex-shrink: 0; width: 43px; height: 43px; border-radius: 10px; font-size: 23px}
+  .stat-icon.blue { color: var(--accent-text); background: var(--accent-soft)}
+  .stat-icon.green { color: var(--ok-text); background: var(--ok-bg)}
+  .stat-icon.red { color: var(--err-text); background: var(--err-bg)}
+  .stat-card p { margin: 0 0 6px; color: var(--muted); font-size: 11px}
+  .stat-card strong { font-size: 24px}
+  .panel { overflow: hidden; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2)}
+  .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 20px 17px}
+  .panel-heading h2, .modal-heading h2 { margin: 0 0 6px; font-size: 15px}
+  .count-badge { padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: 7px; color: var(--text-2); font-size: 10px; white-space: nowrap}
+  .filters { display: flex; gap: 10px; padding: 0 20px 17px}
+  .search-box { display: flex; align-items: center; flex: 1; gap: 10px; min-width: 120px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--muted)}
+  .search-box > span { font-size: 22px}
+  .search-box input { width: 100%; min-width: 0; padding: 11px 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 11px}
+  .search-box input::placeholder { color: var(--muted)}
+  .filters select { max-width: 200px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 11px}
+  .table-wrap { overflow-x: auto}
+  table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap}
+  th { padding: 13px 16px; background: var(--surface); color: var(--muted); font-size: 10px; font-weight: 600}
+  td { padding: 13px 16px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 11px}
+  .participant-cell { display: flex; align-items: center; gap: 10px}
+  .avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-weight: 700}
+  .identity { display: grid; gap: 4px}
+  .identity strong { color: var(--text); font-size: 11px}
+  .identity span { color: var(--muted); font-size: 10px}
+  code { color: var(--accent-text); font-family: ui-monospace, monospace; font-size: 10px}
+  .status { display: inline-block; padding: 5px 8px; border-radius: 20px; font-size: 10px}
+  .status.registered { background: var(--ok-bg); color: var(--ok-text)}
+  .status.cancelled { background: var(--err-bg); color: var(--err-text)}
+  .detail-button { padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface-3); color: var(--accent-text); font-size: 10px}
+  .empty-state { display: flex; min-height: 290px; align-items: center; justify-content: center; flex-direction: column; padding: 30px; text-align: center}
+  .empty-icon { margin-bottom: 10px; color: var(--muted); font-size: 42px}
+  .empty-state h3 { margin: 0 0 7px; font-size: 15px}
+  .empty-state p { max-width: 360px; margin: 0 0 15px; color: var(--muted); font-size: 12px; line-height: 1.6}
+  .panel-footer { padding: 13px 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px}
+  .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: #02060bd9}
+  .detail-modal { width: 100%; max-width: 480px; padding: 22px; border: 1px solid var(--border-strong); border-radius: 13px; background: var(--surface-2); box-shadow: 0 20px 80px #0008}
+  .modal-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 22px}
+  .close-button { align-self: flex-start; border: 0; background: transparent; color: var(--text-2); font-size: 25px}
+  dl { display: grid; grid-template-columns: 140px 1fr; gap: 13px 10px; margin: 0 0 24px}
+  dt { color: var(--muted); font-size: 11px}
+  dd { margin: 0; overflow-wrap: anywhere; color: var(--text); font-size: 11px}
+  .primary-button { padding: 10px 14px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 11px}
+  @media (max-width: 760px) { .filters { flex-wrap: wrap} .search-box { flex-basis: 100%} .filters select { flex: 1; max-width: none; min-height: 38px} }
+  @media (max-width: 520px) { .page-heading { align-items: flex-start; flex-direction: column} .stats-grid { grid-template-columns: 1fr} .panel-heading { padding: 16px} .filters { padding: 0 16px 16px} dl { grid-template-columns: 1fr; gap: 5px} dd { margin-bottom: 9px} }
 </style>

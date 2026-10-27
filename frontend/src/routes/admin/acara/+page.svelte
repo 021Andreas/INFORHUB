@@ -3,8 +3,9 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { api } from '#lib/api.js';
+  import Icon from '#lib/components/Icon.svelte';
 
-  type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed';
+  type EventStatus = 'draft' | 'pending' | 'published' | 'rejected' | 'completed';
 
   type EventItem = {
     id: number;
@@ -19,11 +20,10 @@
 
   let events = $state<EventItem[]>([]);
 
-  // GET /api/events baru mengembalikan acara berstatus published.
+  // Admin melihat semua acara; penyelenggara hanya acara miliknya (semua status).
   onMount(async () => {
     try {
-      const data = await api<Omit<EventItem, 'status'>[]>('/api/events');
-      events = data.map((e) => ({ ...e, status: 'published' as EventStatus }));
+      events = await api<EventItem[]>('/api/admin/events?status=all');
     } catch (e) {
       console.error('Gagal memuat acara:', e);
     }
@@ -33,8 +33,9 @@
 
   const statusLabels: Record<EventStatus, string> = {
     draft: 'Draft',
+    pending: 'Menunggu persetujuan',
     published: 'Dipublikasikan',
-    cancelled: 'Dibatalkan',
+    rejected: 'Ditolak',
     completed: 'Selesai'
   };
 
@@ -113,7 +114,7 @@
 
       <div class="filters">
         <label class="search">
-          <span>⌕</span>
+          <Icon name="search" size={18}/>
           <input
             bind:value={search}
             placeholder="Cari judul atau lokasi..."
@@ -125,7 +126,8 @@
           <option value="all">Semua status</option>
           <option value="draft">Draft</option>
           <option value="published">Dipublikasikan</option>
-          <option value="cancelled">Dibatalkan</option>
+          <option value="pending">Menunggu persetujuan</option>
+          <option value="rejected">Ditolak</option>
           <option value="completed">Selesai</option>
         </select>
       </div>
@@ -152,7 +154,7 @@
                     {#if event.posterUrl}
                       <img src={event.posterUrl} alt={`Poster ${event.title}`} />
                     {:else}
-                      <div class="poster-placeholder">▣</div>
+                      <div class="poster-placeholder"><Icon name="calendar" size={26}/></div>
                     {/if}
                     <strong>{event.title}</strong>
                   </div>
@@ -177,7 +179,7 @@
       </div>
     {:else}
       <div class="empty">
-        <div class="empty-icon">▣</div>
+        <div class="empty-icon"><Icon name="calendar" size={24}/></div>
         <h3>{search || statusFilter !== 'all' ? 'Acara tidak ditemukan' : 'Belum ada acara'}</h3>
         <p>
           {search || statusFilter !== 'all'
@@ -199,57 +201,58 @@
 </section>
 
 <style>
-  .events-page { max-width: 1600px; margin: auto; color: #e7edf7; }
-  .heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
-  .breadcrumb { color: #7f94ad; font-size: 11px; margin-bottom: 9px; }
-  h1 { font-size: 27px; margin: 0 0 6px; }
-  .heading p, .toolbar p { margin: 0; color: #91a2b8; font-size: 12px; }
-  button { cursor: pointer; }
-  .primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; border: 0; border-radius: 8px; background: #247cf4; color: white; font-size: 12px; font-weight: 650; }
-  .primary-button:hover { background: #408fff; }
-  .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
-  .summary-card { padding: 17px; border: 1px solid #223145; border-radius: 10px; background: #0d1722; }
-  .summary-card span { display: block; color: #9bacc1; font-size: 11px; margin-bottom: 9px; }
-  .summary-card strong { font-size: 25px; }
-  .panel { overflow: hidden; border: 1px solid #223145; border-radius: 11px; background: #0d1722; }
-  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px; }
-  .toolbar h2 { margin: 0 0 6px; font-size: 15px; }
-  .filters { display: flex; gap: 9px; }
-  .search, .filters select { display: flex; align-items: center; gap: 8px; min-height: 39px; padding: 0 11px; border: 1px solid #2a3b50; border-radius: 8px; background: #101c29; color: #cbd7e7; }
-  .search input { width: 190px; border: 0; outline: 0; background: transparent; color: white; font-size: 11px; }
-  .filters select { font-size: 11px; }
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
-  th { padding: 13px 17px; color: #8fa1b8; background: #101b28; font-size: 10px; font-weight: 600; }
-  td { padding: 14px 17px; border-top: 1px solid #1e2c3d; color: #bac8d9; font-size: 11px; }
-  .event-cell { display: flex; align-items: center; gap: 10px; max-width: 230px; white-space: normal; }
-  .event-cell img, .poster-placeholder { width: 43px; height: 43px; flex-shrink: 0; object-fit: cover; border-radius: 7px; }
-  .poster-placeholder { display: grid; place-items: center; background: #17283c; color: #6e9bd4; font-size: 20px; }
-  .event-cell strong { color: #e4ecf8; font-size: 11px; }
-  .status { display: inline-block; padding: 5px 8px; border-radius: 20px; font-size: 10px; }
-  .status.published { background: #12352d; color: #53d6a7; }
-  .status.draft { background: #332b1b; color: #e9c36a; }
-  .status.cancelled { background: #3a2027; color: #ff8c9a; }
-  .status.completed { background: #1d2b41; color: #9dc6ff; }
-  .edit-button { padding: 7px 10px; border: 1px solid #30445c; border-radius: 6px; background: #152337; color: #78b4ff; font-size: 10px; }
-  .empty { display: flex; min-height: 300px; align-items: center; justify-content: center; flex-direction: column; padding: 30px; text-align: center; }
-  .empty-icon { margin-bottom: 12px; color: #6f86a2; font-size: 40px; }
-  .empty h3 { margin: 0 0 7px; font-size: 15px; }
-  .empty p { margin: 0 0 17px; color: #91a2b8; font-size: 12px; }
-  .panel-footer { padding: 13px 18px; border-top: 1px solid #1e2c3d; color: #8093aa; font-size: 10px; }
+  .events-page { max-width: 1600px; margin: auto; color: var(--text)}
+  .heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px}
+  .breadcrumb { color: var(--muted); font-size: 11px; margin-bottom: 9px}
+  h1 { font-size: 27px; margin: 0 0 6px}
+  .heading p, .toolbar p { margin: 0; color: var(--muted); font-size: 12px}
+  button { cursor: pointer}
+  .primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; font-weight: 650}
+  .primary-button:hover { background: var(--accent)}
+  .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px}
+  .summary-card { padding: 17px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2)}
+  .summary-card span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 9px}
+  .summary-card strong { font-size: 25px}
+  .panel { overflow: hidden; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2)}
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px}
+  .toolbar h2 { margin: 0 0 6px; font-size: 15px}
+  .filters { display: flex; gap: 9px}
+  .search, .filters select { display: flex; align-items: center; gap: 8px; min-height: 39px; padding: 0 11px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text-2)}
+  .search input { width: 190px; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 11px}
+  .filters select { font-size: 11px}
+  .table-wrap { overflow-x: auto}
+  table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap}
+  th { padding: 13px 17px; color: var(--muted); background: var(--surface); font-size: 10px; font-weight: 600}
+  td { padding: 14px 17px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 11px}
+  .event-cell { display: flex; align-items: center; gap: 10px; max-width: 230px; white-space: normal}
+  .event-cell img, .poster-placeholder { width: 43px; height: 43px; flex-shrink: 0; object-fit: cover; border-radius: 7px}
+  .poster-placeholder { display: grid; place-items: center; background: var(--surface-3); color: var(--accent-text); font-size: 20px}
+  .event-cell strong { color: var(--text); font-size: 11px}
+  .status { display: inline-block; padding: 5px 8px; border-radius: 20px; font-size: 10px}
+  .status.published { background: var(--ok-bg); color: var(--ok-text)}
+  .status.draft { background: var(--warn-bg); color: var(--warn-text)}
+  .status.rejected { background: var(--err-bg); color: var(--err-text)}
+  .status.pending { background: var(--surface-3); color: var(--accent-text)}
+  .status.completed { background: var(--surface-3); color: var(--accent-text)}
+  .edit-button { padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface-3); color: var(--accent-text); font-size: 10px}
+  .empty { display: flex; min-height: 300px; align-items: center; justify-content: center; flex-direction: column; padding: 30px; text-align: center}
+  .empty-icon { margin-bottom: 12px; color: var(--muted); font-size: 40px}
+  .empty h3 { margin: 0 0 7px; font-size: 15px}
+  .empty p { margin: 0 0 17px; color: var(--muted); font-size: 12px}
+  .panel-footer { padding: 13px 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px}
   @media (max-width: 900px) {
-    .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .toolbar { align-items: flex-start; flex-direction: column; }
-    .filters { width: 100%; }
-    .search { flex: 1; }
-    .search input { width: 100%; min-width: 0; }
+    .summary { grid-template-columns: repeat(2, minmax(0, 1fr))}
+    .toolbar { align-items: flex-start; flex-direction: column}
+    .filters { width: 100%}
+    .search { flex: 1}
+    .search input { width: 100%; min-width: 0}
   }
   @media (max-width: 520px) {
-    .heading { align-items: flex-start; flex-direction: column; }
-    .summary { gap: 8px; }
-    .summary-card { padding: 13px; }
-    .summary-card strong { font-size: 21px; }
-    .filters { flex-direction: column; }
-    .filters select { min-height: 38px; }
+    .heading { align-items: flex-start; flex-direction: column}
+    .summary { gap: 8px}
+    .summary-card { padding: 13px}
+    .summary-card strong { font-size: 21px}
+    .filters { flex-direction: column}
+    .filters select { min-height: 38px}
   }
 </style>
