@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { api } from '#lib/api.js';
+  import { loadSession, homeFor, loginUrl } from '#lib/session.js';
   import Brand from '#lib/components/Brand.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import ThemeToggle from '#lib/components/ThemeToggle.svelte';
@@ -20,14 +21,22 @@
   ];
   let currentTitle = $derived(navGroups.flatMap(g=>g.items).find(i=>i.href===page.url.pathname)?.label ?? 'Dashboard');
   function isActive(href:string){return href==='/admin'?page.url.pathname==='/admin':page.url.pathname===href||page.url.pathname.startsWith(href+'/');}
-  onMount(async()=>{
-    try {
-      const res=await api<{user:{name:string;role:string;email?:string}}>('/api/auth/me');
-      user=res.user;
-      if (res.user.role !== 'admin') { await goto(res.user.role === 'penyelenggara' ? '/penyelenggara' : '/'); return; }
-    } catch { await goto('/login'); }
-  });
-  async function logout(){try{await api('/api/auth/logout',{method:'POST'});}catch{}await goto('/login');}
+  // Konten halaman baru dirender setelah role terverifikasi, sehingga halaman tidak
+  // sempat memanggil API atau tampil untuk role yang salah. Ini hanya guard navigasi;
+  // otorisasi data tetap di backend.
+  let status = $state<'loading'|'ready'|'error'>('loading');
+  let errorMessage = $state('');
+  async function guard(){
+    status='loading';
+    const s=await loadSession();
+    if(s.status==='unauthenticated'){ await goto(loginUrl(page.url.pathname+page.url.search)); return; }
+    if(s.status==='error'){ errorMessage=s.message; status='error'; return; }
+    user=s.user;
+    if(s.user.role!=='admin'){ await goto(homeFor(s.user.role)); return; }
+    status='ready';
+  }
+  onMount(guard);
+  async function logout(){try{await api('/api/auth/logout',{method:'POST'});}catch{}user=null;await goto('/login');}
 </script>
 <svelte:head><title>{currentTitle} | INFORHUB Administrator</title><meta name="description" content="Panel pengelolaan acara INFORHUB"/></svelte:head>
 <div class="admin-shell">
@@ -45,7 +54,7 @@
       <div class="topbar-right"><ThemeToggle /><div class="profile-wrap"><button class="profile" aria-expanded={profileOpen} onclick={()=>profileOpen=!profileOpen}><span class="avatar">{(user?.name??'A').slice(0,1).toUpperCase()}</span><span class="profile-copy"><strong>{user?.name??'Memuat akun...'}</strong><small>{user?.role==='admin'?'Administrator':user?.role==='penyelenggara'?'Penyelenggara':''}</small></span><Icon name="chevron-down" size={16}/></button>
         {#if profileOpen}<div class="profile-menu"><div class="menu-user"><strong>{user?.name??'Pengguna'}</strong><small>{user?.email??''}</small></div><a href="/">Lihat situs publik</a><button onclick={logout}>Keluar dari akun</button></div>{/if}</div></div>
     </header>
-    <main class="page-content">{@render children()}</main>
+    <main class="page-content">{#if status==='ready'}{@render children()}{:else if status==='error'}<div role="alert" style="padding:24px;border:1px solid var(--border);border-radius:12px;background:var(--surface)"><strong>Tidak dapat memeriksa sesi</strong><p style="color:var(--muted);font-size:13px">{errorMessage}</p><button class="nav-item" style="width:auto;justify-content:center" onclick={guard}>Coba lagi</button></div>{:else}<p style="color:var(--muted);font-size:13px">Memeriksa sesi...</p>{/if}</main>
   </div>
 </div>
 <style>

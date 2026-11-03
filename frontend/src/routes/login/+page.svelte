@@ -5,6 +5,7 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { api } from "#lib/api.js";
+  import { homeFor, safeRedirect } from "#lib/session.js";
 
   let email = $state("");
   let password = $state("");
@@ -15,9 +16,7 @@
     try {
       const result = await api<{ user: { role: string } }>("/api/auth/me");
       const redirect = page.url.searchParams.get("redirect");
-      goto(redirect?.startsWith("/") && !redirect.startsWith("//")
-        ? redirect
-        : result.user.role === "mahasiswa" ? "/" : "/admin");
+      goto(safeRedirect(redirect, homeFor(result.user.role)));
     } catch {
       // Belum login; formulir tetap ditampilkan.
     }
@@ -38,9 +37,7 @@
         body: { email, password }
       });
       const redirect = page.url.searchParams.get("redirect");
-      goto(redirect?.startsWith("/") && !redirect.startsWith("//")
-        ? redirect
-        : user.role === "mahasiswa" ? "/" : "/admin");
+      goto(safeRedirect(redirect, homeFor(user.role)));
     } catch (e) {
       error = e instanceof Error ? e.message : "Gagal masuk.";
     }

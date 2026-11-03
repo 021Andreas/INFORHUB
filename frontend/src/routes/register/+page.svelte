@@ -4,6 +4,7 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { api } from "#lib/api.js";
+  import { homeFor } from "#lib/session.js";
 
   let name = $state("");
   let email = $state("");
@@ -15,7 +16,7 @@
   onMount(async () => {
     try {
       const result = await api<{ user: { role: string } }>("/api/auth/me");
-      goto(result.user.role === "mahasiswa" ? "/" : "/admin");
+      goto(homeFor(result.user.role));
     } catch {
       // Belum login; formulir pendaftaran tetap ditampilkan.
     }

@@ -20,7 +20,7 @@
   let profileOpen = $state(false);
 
   const path = $derived(page.url.pathname);
-  const isAdmin = $derived(path.startsWith('/admin'));
+  const isAdmin = $derived(path.startsWith('/admin') || path.startsWith('/penyelenggara'));
   const isAuth = $derived(path === '/login' || path === '/register');
   const publicPage = $derived(!isAdmin && !isAuth);
 
