@@ -19,13 +19,18 @@
   };
 
   let events = $state<EventItem[]>([]);
+  let role = $state<'admin' | 'penyelenggara'>('penyelenggara');
+  let actionError = $state('');
+  let actionBusy = $state<number | null>(null);
 
   // Admin melihat semua acara; penyelenggara hanya acara miliknya (semua status).
   onMount(async () => {
     try {
+      const me = await api<{user:{role:'admin'|'penyelenggara'}}>('/api/auth/me');
+      role = me.user.role;
       events = await api<EventItem[]>('/api/admin/events?status=all');
     } catch (e) {
-      console.error('Gagal memuat acara:', e);
+      actionError = e instanceof Error ? e.message : 'Gagal memuat acara.';
     }
   });
   let search = $state('');
@@ -60,6 +65,21 @@
     }).format(new Date(value));
   }
 
+  async function updateModeration(event: EventItem, status: 'published' | 'rejected') {
+    const verb = status === 'published' ? 'menyetujui' : 'menolak';
+    if (!confirm(`Yakin ${verb} pengajuan acara "${event.title}"?`)) return;
+    actionBusy = event.id;
+    actionError = '';
+    try {
+      await api(`/api/events/${event.id}/status`, { method: 'POST', body: { status } });
+      events = events.map(item => item.id === event.id ? { ...item, status } : item);
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : 'Status acara gagal diperbarui.';
+    } finally {
+      actionBusy = null;
+    }
+  }
+
   function createEvent() {
     goto('/admin/acara/form');
   }
@@ -76,16 +96,19 @@
 <section class="events-page">
   <div class="heading">
     <div>
-      <div class="breadcrumb">Admin / Kelola Acara</div>
-      <h1>Kelola Acara</h1>
-      <p>Buat, atur, dan pantau publikasi acara INFORHUB.</p>
+      <div class="breadcrumb">{role === 'admin' ? 'Administrator / Moderasi Acara' : 'Penyelenggara / Acara Saya'}</div>
+      <h1>{role === 'admin' ? 'Moderasi Acara' : 'Acara Saya'}</h1>
+      <p>{role === 'admin' ? 'Periksa pengajuan acara dan tentukan apakah acara dapat dipublikasikan.' : 'Buat acara, perbarui informasi, atur kuota, dan pantau status pengajuan.'}</p>
     </div>
 
-    <button class="primary-button" onclick={createEvent}>
-      <span>＋</span> Tambah Acara
-    </button>
+    {#if role === 'penyelenggara'}
+      <button class="primary-button" onclick={createEvent}>
+        <span>＋</span> Buat Acara
+      </button>
+    {/if}
   </div>
 
+  {#if actionError}<div class="action-error" role="alert">{actionError}</div>{/if}
   <div class="summary">
     <div class="summary-card">
       <span>Total acara</span>
@@ -108,8 +131,8 @@
   <div class="panel">
     <div class="toolbar">
       <div>
-        <h2>Daftar Acara</h2>
-        <p>Kelola semua informasi acara dari satu tempat.</p>
+        <h2>{role === 'admin' ? 'Pengajuan Acara' : 'Daftar Acara Saya'}</h2>
+        <p>{role === 'admin' ? 'Acara berstatus menunggu persetujuan perlu ditinjau administrator.' : 'Daftar acara yang dikelola oleh akun penyelenggara ini.'}</p>
       </div>
 
       <div class="filters">
@@ -168,9 +191,18 @@
                   </span>
                 </td>
                 <td>
-                  <button class="edit-button" onclick={() => editEvent(event.id)}>
-                    Edit
-                  </button>
+                  {#if role === 'admin'}
+                    {#if event.status === 'pending'}
+                      <div class="moderation-actions">
+                        <button class="approve-button" disabled={actionBusy === event.id} onclick={() => updateModeration(event, 'published')}>Setujui</button>
+                        <button class="reject-button" disabled={actionBusy === event.id} onclick={() => updateModeration(event, 'rejected')}>Tolak</button>
+                      </div>
+                    {:else}
+                      <span class="muted-action">Tidak perlu tindakan</span>
+                    {/if}
+                  {:else}
+                    <button class="edit-button" onclick={() => editEvent(event.id)}>Edit</button>
+                  {/if}
                 </td>
               </tr>
             {/each}
@@ -240,6 +272,14 @@
   .empty h3 { margin: 0 0 7px; font-size: 15px}
   .empty p { margin: 0 0 17px; color: var(--muted); font-size: 12px}
   .panel-footer { padding: 13px 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px}
+
+  .action-error{margin:0 0 16px;padding:12px 14px;border:1px solid var(--err-text);border-radius:8px;background:var(--err-bg);color:var(--err-text);font-size:12px}
+  .moderation-actions{display:flex;gap:7px}
+  .approve-button,.reject-button{padding:7px 9px;border:1px solid transparent;border-radius:6px;font-size:10px;font-weight:650;cursor:pointer}
+  .approve-button{background:var(--ok-bg);color:var(--ok-text);border-color:var(--ok-text)}
+  .reject-button{background:var(--err-bg);color:var(--err-text);border-color:var(--err-text)}
+  .approve-button:disabled,.reject-button:disabled{opacity:.55;cursor:wait}
+  .muted-action{color:var(--muted);font-size:10px}
   @media (max-width: 900px) {
     .summary { grid-template-columns: repeat(2, minmax(0, 1fr))}
     .toolbar { align-items: flex-start; flex-direction: column}

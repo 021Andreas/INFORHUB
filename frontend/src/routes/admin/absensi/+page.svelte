@@ -114,7 +114,7 @@
 </script>
 
 <svelte:head>
-  <title>Absensi Acara | INFORHUB Admin</title>
+  <title>Presensi QR | INFORHUB Penyelenggara</title>
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -122,7 +122,7 @@
 <section class="page">
   <div class="heading">
     <div>
-      <div class="breadcrumb">Admin / Absensi</div>
+      <div class="breadcrumb">Penyelenggara / Presensi QR</div>
       <h1>Absensi Acara</h1>
       <p>Tampilkan QR Code agar peserta dapat melakukan check-in melalui perangkat mereka.</p>
     </div>

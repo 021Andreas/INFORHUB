@@ -117,16 +117,16 @@
 </script>
 
 <svelte:head>
-  <title>Peserta | INFORHUB Admin</title>
+  <title>Peserta Acara | INFORHUB Penyelenggara</title>
   <meta name="description" content="Kelola peserta dan pendaftaran acara INFORHUB." />
 </svelte:head>
 
 <section class="participants-page">
   <div class="page-heading">
     <div>
-      <div class="breadcrumb">Admin / Peserta</div>
+      <div class="breadcrumb">Penyelenggara / Peserta</div>
       <h1>Peserta</h1>
-      <p>Lihat dan kelola pendaftaran peserta untuk seluruh acara.</p>
+      <p>Lihat dan kelola pendaftar dari acara yang menjadi tanggung jawab Anda.</p>
     </div>
 
     <button

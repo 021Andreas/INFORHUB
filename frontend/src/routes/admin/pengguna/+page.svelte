@@ -56,7 +56,8 @@
 <section class="page">
   <div class="breadcrumb">Admin / Pengguna</div>
   <h1>Manajemen Pengguna</h1>
-  <p class="subtitle">Daftar akun pengguna yang tersimpan di database INFORHUB.</p>
+  <p class="subtitle">Kelola identitas akun, peran pengguna, dan status verifikasi penyelenggara.</p>
+  <div class="access-note"><strong>Catatan integrasi:</strong> halaman saat ini menampilkan data akun dari backend. Aksi ubah role, verifikasi, dan penangguhan belum diaktifkan karena endpoint perubahan akun belum tersedia pada kode frontend yang diberikan.</div>
 
   <div class="stats">
     <article><span>Total pengguna</span><strong>{users.length}</strong></article>
@@ -106,6 +107,7 @@
 
 <style>
   .page{max-width:1200px;margin:auto;color:var(--text)}.breadcrumb{color:var(--muted);font-size:11px;margin-bottom:9px}h1{margin:0 0 8px;font-size:27px}.subtitle{margin:0 0 24px;color:var(--muted);font-size:12px}
+  .access-note{margin:-10px 0 18px;padding:12px 14px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--muted);font-size:11px;line-height:1.6}.access-note strong{color:var(--text)}
   .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.stats article,.panel{border:1px solid var(--border);border-radius:11px;background:var(--surface-2)}.stats article{padding:19px;display:grid;gap:10px}.stats span{color:var(--muted);font-size:11px}.stats strong{font-size:27px}.stats .blue{color:var(--accent-text)}
   .panel{overflow:hidden}.filters{display:flex;gap:10px;padding:17px 18px 10px}input,select{min-width:0;padding:11px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text);font-size:11px}input{flex:1}.count{padding:8px 18px 15px;color:var(--muted);font-size:11px}
   .table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap;font-size:12px}th,td{padding:15px;border-bottom:1px solid var(--border)}th{background:var(--surface);color:var(--muted)}td strong,td small{display:block}td strong{margin-bottom:5px}td small{color:var(--muted);font-size:10px}

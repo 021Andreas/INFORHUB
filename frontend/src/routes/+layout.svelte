@@ -25,6 +25,7 @@
   const publicPage = $derived(!isAdmin && !isAuth);
 
   const userInitial = $derived((user?.name ?? 'P').trim().charAt(0).toUpperCase());
+  const managementHref = $derived(user?.role === 'admin' ? '/admin' : '/penyelenggara');
   const roleLabel = $derived(
     user?.role === 'admin' ? 'Administrator' : user?.role === 'penyelenggara' ? 'Penyelenggara' : 'Mahasiswa'
   );
@@ -162,7 +163,7 @@
                 </a>
 
                 {#if ['admin', 'penyelenggara'].includes(user.role)}
-                  <a href="/admin" onclick={() => (profileOpen = false)}>
+                  <a href={managementHref} onclick={() => (profileOpen = false)}>
                     <Icon name="settings" size={17} />
                     <span>Panel pengelola</span>
                   </a>
@@ -262,7 +263,7 @@
         {#if user && ['admin', 'penyelenggara'].includes(user.role)}
           <div class="sidebar-separator"></div>
 
-          <a href="/admin" onclick={closeMenus}>
+          <a href={managementHref} onclick={closeMenus}>
             <Icon name="settings" />
             <span>Panel pengelola</span>
           </a>

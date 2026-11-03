@@ -31,8 +31,13 @@
 
   // Mode edit: isi formulir dari data acara di server.
   onMount(async () => {
-    if (!editId) return;
     try {
+      const me = await api<{user:{role:string}}>('/api/auth/me');
+      if (me.user.role !== 'penyelenggara') {
+        await goto('/admin/acara');
+        return;
+      }
+      if (!editId) return;
       const e = await api<{
         title: string; description: string | null; location: string; quota: number;
         startAt: string; endAt: string; deadline: string | null; posterUrl: string | null; status: string;
@@ -46,7 +51,7 @@
       quota = e.quota;
       posterUrl = e.posterUrl ?? '';
       currentStatus = e.status;
-      status = e.status === 'published' ? 'published' : 'draft';
+      status = e.status === 'published' ? 'published' : e.status === 'pending' ? 'pending' : 'draft';
     } catch (err) {
       error = err instanceof Error ? err.message : 'Gagal memuat acara.';
     }
@@ -138,17 +143,9 @@
         currentStatus = 'draft';
       }
 
-      // Publikasi: draft -> pending -> published. Hanya admin yang boleh
-      // mempublikasikan; selain itu acara menunggu persetujuan.
-      if (status === 'published' && currentStatus !== 'published') {
-        if (currentStatus !== 'pending') {
-          await api(`/api/events/${id}/status`, { method: 'POST', body: { status: 'pending' } });
-        }
-        try {
-          await api(`/api/events/${id}/status`, { method: 'POST', body: { status: 'published' } });
-        } catch {
-          // menunggu persetujuan admin
-        }
+      // Penyelenggara hanya mengajukan acara. Publikasi akhir dilakukan admin.
+      if (status === 'pending' && currentStatus !== 'pending' && currentStatus !== 'published') {
+        await api(`/api/events/${id}/status`, { method: 'POST', body: { status: 'pending' } });
       }
 
       goto('/admin/acara');
@@ -306,15 +303,16 @@
             <span>Status Acara</span>
             <select bind:value={status}>
               <option value="draft">Draft</option>
-              <option value="published">Publikasikan</option>
+              <option value="pending">Ajukan untuk persetujuan</option>
+              {#if currentStatus === 'published'}<option value="published" disabled>Sudah dipublikasikan</option>{/if}
             </select>
-            <small>Draft tidak ditampilkan sebagai acara publik.</small>
+            <small>Acara yang diajukan akan menunggu pemeriksaan administrator sebelum dipublikasikan.</small>
           </label>
         </section>
 
         <div class="form-actions">
           <a href="/admin/acara" class="cancel-button">Batal</a>
-          <button type="submit" class="save-button" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan Acara'}</button>
+          <button type="submit" class="save-button" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
         </div>
       </div>
     </div>

@@ -11,28 +11,33 @@
   let profileOpen = $state(false);
   let user = $state<{name:string;role:string;email?:string}|null>(null);
   const navGroups = [
-    {label:'MENU UTAMA',items:[
+    {label:'ADMINISTRASI PLATFORM',items:[
       {label:'Dashboard',href:'/admin',icon:'home'},
-      {label:'Kelola Acara',href:'/admin/acara',icon:'calendar'},
-      {label:'Peserta',href:'/admin/peserta',icon:'users'},
-      {label:'Absensi QR',href:'/admin/absensi',icon:'qr'},
-      {label:'Sertifikat',href:'/admin/sertifikat',icon:'certificate'}]},
-    {label:'PENGELOLAAN',items:[{label:'Pengguna',href:'/admin/pengguna',icon:'users'}]}
+      {label:'Moderasi Acara',href:'/admin/acara',icon:'calendar'},
+      {label:'Pengguna & Role',href:'/admin/pengguna',icon:'users'},
+      {label:'Template Sertifikat',href:'/admin/template-sertifikat',icon:'file'}
+    ]}
   ];
   let currentTitle = $derived(navGroups.flatMap(g=>g.items).find(i=>i.href===page.url.pathname)?.label ?? 'Dashboard');
   function isActive(href:string){return href==='/admin'?page.url.pathname==='/admin':page.url.pathname===href||page.url.pathname.startsWith(href+'/');}
-  onMount(async()=>{try{const res=await api<{user:{name:string;role:string;email?:string}}>('/api/auth/me');if(!['admin','penyelenggara'].includes(res.user.role)){await goto('/');return;}user=res.user;}catch{await goto('/login');}});
+  onMount(async()=>{
+    try {
+      const res=await api<{user:{name:string;role:string;email?:string}}>('/api/auth/me');
+      user=res.user;
+      if (res.user.role !== 'admin') { await goto(res.user.role === 'penyelenggara' ? '/penyelenggara' : '/'); return; }
+    } catch { await goto('/login'); }
+  });
   async function logout(){try{await api('/api/auth/logout',{method:'POST'});}catch{}await goto('/login');}
 </script>
-<svelte:head><title>{currentTitle} | INFORHUB Admin</title><meta name="description" content="Panel pengelolaan acara INFORHUB"/></svelte:head>
+<svelte:head><title>{currentTitle} | INFORHUB Administrator</title><meta name="description" content="Panel pengelolaan acara INFORHUB"/></svelte:head>
 <div class="admin-shell">
   {#if sidebarOpen}<button class="overlay" aria-label="Tutup navigasi" onclick={()=>sidebarOpen=false}></button>{/if}
   <aside class:mobile-open={sidebarOpen} class="sidebar">
     <div class="brand-row"><Brand href="/admin"/></div>
-    <nav class="nav-content">{#each navGroups as group}<div class="nav-group"><p class="group-label">{group.label}</p>{#each group.items as item}{#if item.href !== '/admin/pengguna' || user?.role === 'admin'}<a href={item.href} class:active={isActive(item.href)} class="nav-item" onclick={()=>sidebarOpen=false}><Icon name={item.icon} size={19}/><span>{item.label}</span></a>{/if}{/each}</div>{/each}
+    <nav class="nav-content">{#each navGroups as group}<div class="nav-group"><p class="group-label">{group.label}</p>{#each group.items as item}<a href={item.href} class:active={isActive(item.href)} class="nav-item" onclick={()=>sidebarOpen=false}><Icon name={item.icon} size={19}/><span>{item.label}</span></a>{/each}</div>{/each}
       <div class="nav-group"><p class="group-label">LAINNYA</p><a href="/" class="nav-item"><Icon name="home" size={19}/><span>Lihat situs</span></a><button class="nav-item nav-button" onclick={logout}><Icon name="logout" size={19}/><span>Keluar</span></button></div>
     </nav>
-    <div class="sidebar-footer"><div class="footer-mark"><Brand compact href="/admin"/></div><div><strong>INFORHUB Admin</strong><p>Kelola acara dan peserta dengan mudah.</p></div></div>
+    <div class="sidebar-footer"><div class="footer-mark"><Brand compact href="/admin"/></div><div><strong>INFORHUB Administrator</strong><p>Moderasi platform, kelola akun, dan atur template sertifikat.</p></div></div>
   </aside>
   <div class="main-area">
     <header class="topbar"><button class="menu-toggle" aria-label="Buka navigasi" onclick={()=>sidebarOpen=!sidebarOpen}><Icon name="menu" size={22}/></button><div class="mobile-title">{currentTitle}</div>
