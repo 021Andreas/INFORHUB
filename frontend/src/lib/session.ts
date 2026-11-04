@@ -1,7 +1,7 @@
 import { api, ApiError } from './api.js';
 
 export type Role = 'admin' | 'penyelenggara' | 'mahasiswa';
-export type SessionUser = { name: string; role: string; email?: string };
+export type SessionUser = { id?: number; name: string; role: string; email?: string };
 
 /** Hasil pemeriksaan sesi. Backend tetap sumber otorisasi; ini hanya untuk navigasi. */
 export type SessionResult =

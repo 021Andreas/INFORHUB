@@ -7,35 +7,20 @@
 
   type Stats = { totalEvents: number; publishedEvents: number; pendingEvents: number; totalRegistrations: number; totalPresent: number; totalUsers: number };
   type EventItem = { id: number; title: string; location: string; startAt: string; status: string; registered: number; present: number; quota: number; category?: string | null };
-  type Participant = { id: number; name: string; email: string; eventTitle: string; registeredAt: string; status: string };
-  type Certificate = { id: number; participant: string; event: string; certificateNumber: string | null; issuedAt: string | null };
 
-  let role = $state<'admin' | 'penyelenggara'>('penyelenggara');
   let stats = $state<Stats | null>(null);
   let events = $state<EventItem[]>([]);
-  let participants = $state<Participant[]>([]);
-  let certificates = $state<Certificate[]>([]);
   let loading = $state(true);
   let loadError = $state('');
 
   onMount(async () => {
-    try {
-      const me = await api<{user:{role:'admin'|'penyelenggara'}}>('/api/auth/me');
-      role = me.user.role;
-    } catch {
-      loadError = 'Sesi pengguna tidak dapat diverifikasi.';
-    }
     const results = await Promise.allSettled([
       api<Stats>('/api/admin/stats'),
-      api<EventItem[]>('/api/admin/events?status=all&limit=5'),
-      api<Participant[]>('/api/admin/participants?status=all&limit=5'),
-      api<Certificate[]>('/api/admin/certificates?limit=5')
+      api<EventItem[]>('/api/admin/events?status=all&limit=5')
     ]);
     if (results[0].status === 'fulfilled') stats = results[0].value;
     if (results[1].status === 'fulfilled') events = results[1].value;
-    if (results[2].status === 'fulfilled') participants = results[2].value;
-    if (results[3].status === 'fulfilled') certificates = results[3].value;
-    if (results.every((r) => r.status === 'rejected')) loadError = 'Data dashboard belum dapat dimuat. Pastikan backend aktif dan akun memiliki akses pengelola.';
+    if (results.every((r) => r.status === 'rejected')) loadError = 'Data dashboard belum dapat dimuat. Pastikan backend aktif dan akun memiliki akses administrator.';
     loading = false;
   });
 
@@ -44,10 +29,10 @@
   const eventStatus = (status: string) => ({ published: 'Dipublikasikan', pending: 'Menunggu persetujuan', draft: 'Draft', rejected: 'Ditolak', completed: 'Selesai', cancelled: 'Dibatalkan' }[status] ?? status);
 </script>
 
-<svelte:head><title>Dashboard | INFORHUB Admin</title><meta name="description" content="Ringkasan data acara, peserta, absensi, dan sertifikat INFORHUB." /></svelte:head>
+<svelte:head><title>Dashboard | INFORHUB Admin</title><meta name="description" content="Ringkasan platform INFORHUB untuk administrator." /></svelte:head>
 
 <div class="dashboard">
-  <div class="page-heading"><div><p class="eyebrow">{role === 'admin' ? 'PANEL ADMINISTRATOR' : 'PANEL PENYELENGGARA'}</p><h1>Dashboard</h1><p class="subtitle">{role === 'admin' ? 'Pantau pengajuan acara, akun pengguna, dan pengaturan sertifikat platform.' : 'Pantau acara yang dikelola, pendaftaran, kehadiran, dan sertifikat peserta.'}</p></div><a class="refresh" href="/admin"><Icon name="chart" size={16}/> Muat ulang</a></div>
+  <div class="page-heading"><div><p class="eyebrow">PANEL ADMINISTRATOR</p><h1>Dashboard</h1><p class="subtitle">Pantau pengajuan acara, akun pengguna, dan pengaturan sertifikat platform.</p></div><a class="refresh" href="/admin"><Icon name="chart" size={16}/> Muat ulang</a></div>
   {#if loadError}<div class="error-banner"><Icon name="info" size={18}/><span>{loadError}</span></div>{/if}
   <section class="stats-grid" aria-label="Statistik utama">
     <StatCard label="Total Acara" value={loading ? '—' : (stats ? count(stats.totalEvents) : '—')} note={`${(stats ? count(stats.publishedEvents) : '—')} acara dipublikasikan`} icon="calendar" tone="blue" />
@@ -68,17 +53,6 @@
       <div class="status-summary"><div><span class="status-dot blue"></span><span>Dipublikasikan</span><strong>{(stats ? count(stats.publishedEvents) : '—')}</strong></div><div><span class="status-dot amber"></span><span>Menunggu persetujuan</span><strong>{(stats ? count(stats.pendingEvents) : '—')}</strong></div><div><span class="status-dot slate"></span><span>Total acara</span><strong>{(stats ? count(stats.totalEvents) : '—')}</strong></div></div>
       <a href="/admin/acara" class="secondary-link">Lihat semua acara <Icon name="arrow-up-right" size={15}/></a>
     </article>
-    {#if role === 'penyelenggara'}
-    <article class="panel">
-      <div class="panel-heading"><div><p class="eyebrow">PENDAFTARAN</p><h2>Peserta terbaru</h2></div><a href="/admin/peserta" class="view-all">Lihat semua <Icon name="arrow-up-right" size={16}/></a></div>
-      {#if loading}<div class="loading-line"><span></span>Memuat peserta…</div>{:else if participants.length === 0}<EmptyState icon="users" title="Belum ada pendaftar" description="Pendaftar yang masuk akan ditampilkan di sini." />{:else}<div class="simple-list">{#each participants.slice(0,5) as participant (participant.id)}<div class="list-row"><span class="avatar">{participant.name.slice(0,1).toUpperCase()}</span><div class="list-copy"><strong>{participant.name}</strong><small>{participant.eventTitle} · {dateLabel(participant.registeredAt)}</small></div><span class={`status status-${participant.status}`}>{participant.status === 'registered' ? 'Terdaftar' : 'Dibatalkan'}</span></div>{/each}</div>{/if}
-    </article>
-    <article class="panel">
-      <div class="panel-heading"><div><p class="eyebrow">SERTIFIKAT</p><h2>Sertifikat terbaru</h2></div><a href="/admin/sertifikat" class="view-all">Lihat semua <Icon name="arrow-up-right" size={16}/></a></div>
-      {#if loading}<div class="loading-line"><span></span>Memuat sertifikat…</div>{:else if certificates.length === 0}<EmptyState icon="certificate" title="Belum ada sertifikat" description="Sertifikat yang diterbitkan dari data kehadiran akan muncul di sini." />{:else}<div class="simple-list">{#each certificates.slice(0,5) as certificate (certificate.id)}<div class="list-row"><span class="certificate-mark"><Icon name="certificate" size={18}/></span><div class="list-copy"><strong>{certificate.participant}</strong><small>{certificate.event}</small></div><span class="certificate-number">{certificate.certificateNumber ?? 'Belum terbit'}</span></div>{/each}</div>{/if}
-    </article>
-    {/if}
-    {#if role === 'admin'}
     <article class="panel admin-shortcuts">
       <div class="panel-heading"><div><p class="eyebrow">PENGELOLAAN PLATFORM</p><h2>Akses Administrator</h2></div></div>
       <div class="shortcut-links">
@@ -86,7 +60,6 @@
         <a href="/admin/template-sertifikat">Kelola template sertifikat <Icon name="arrow-up-right" size={15}/></a>
       </div>
     </article>
-    {/if}
   </section>
 </div>
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api } from "#lib/api.js";
+  import { loadSession } from "#lib/session.js";
 
   type User = {
     id: number; name: string; email: string;
@@ -15,6 +16,10 @@
   let search = $state("");
   let roleFilter = $state("Semua");
   let statusFilter = $state("Semua");
+  let myId = $state<number | null>(null);
+  let busyId = $state<number | null>(null);
+  let actionError = $state("");
+  let actionOk = $state("");
 
   let filtered = $derived(users.filter((user) => {
     const keyword = search.trim().toLowerCase();
@@ -29,6 +34,8 @@
   let adminCount = $derived(users.filter((user) => user.role === "admin").length);
 
   onMount(async () => {
+    const session = await loadSession();
+    if (session.status === "ok" && typeof session.user.id === "number") myId = session.user.id;
     try {
       users = await api<User[]>("/api/admin/user");
     } catch (e) {
@@ -46,6 +53,39 @@
     return role === "mahasiswa" ? "Mahasiswa" : role === "penyelenggara" ? "Penyelenggara" : "Admin";
   }
 
+  async function updateUser(user: User, patch: Partial<Pick<User, "role" | "status">>, description: string, el: HTMLSelectElement) {
+    const restore = () => { el.value = (patch.role ? user.role : user.status) as string; };
+    if (user.id === myId) { restore(); return; }
+    if (!confirm(`${description}\n\nAkun: ${user.name} (${user.email})`)) { restore(); return; }
+    busyId = user.id;
+    actionError = "";
+    actionOk = "";
+    try {
+      const res = await api<{ user: User }>(`/api/admin/user/${user.id}`, { method: "PATCH", body: patch });
+      users = users.map((item) => (item.id === user.id ? { ...item, ...res.user } : item));
+      actionOk = `Akun ${user.name} berhasil diperbarui.`;
+    } catch (e) {
+      restore();
+      actionError = e instanceof Error ? e.message : "Akun gagal diperbarui.";
+    } finally {
+      busyId = null;
+    }
+  }
+
+  function changeRole(user: User, el: HTMLSelectElement) {
+    const role = el.value as User["role"];
+    if (role === user.role) return;
+    const warn = role === "admin" ? " Akun ini akan mendapat akses administrator penuh." : "";
+    updateUser(user, { role }, `Ubah peran menjadi ${roleLabel(role)}?${warn}`, el);
+  }
+
+  function changeStatus(user: User, el: HTMLSelectElement) {
+    const status = el.value as User["status"];
+    if (status === user.status) return;
+    const warn = status === "suspended" ? " Pengguna tidak akan bisa memakai akunnya." : "";
+    updateUser(user, { status }, `Ubah status akun menjadi ${statusLabel(status)}?${warn}`, el);
+  }
+
   function statusLabel(status: User["status"]) {
     return status === "active" ? "Aktif" : status === "suspended" ? "Ditangguhkan" : "Menunggu verifikasi";
   }
@@ -56,8 +96,7 @@
 <section class="page">
   <div class="breadcrumb">Admin / Pengguna</div>
   <h1>Manajemen Pengguna</h1>
-  <p class="subtitle">Kelola identitas akun, peran pengguna, dan status verifikasi penyelenggara.</p>
-  <div class="access-note"><strong>Catatan integrasi:</strong> halaman saat ini menampilkan data akun dari backend. Aksi ubah role, verifikasi, dan penangguhan belum diaktifkan karena endpoint perubahan akun belum tersedia pada kode frontend yang diberikan.</div>
+  <p class="subtitle">Ubah peran pengguna (mis. mahasiswa menjadi penyelenggara) dan kelola status akun.</p>
 
   <div class="stats">
     <article><span>Total pengguna</span><strong>{users.length}</strong></article>
@@ -82,6 +121,8 @@
       </select>
     </div>
     <div class="count">{filtered.length} pengguna ditemukan</div>
+    {#if actionError}<div class="state error" role="alert"><strong>{actionError}</strong></div>{/if}
+    {#if actionOk}<div class="notice" role="status">{actionOk}</div>{/if}
 
     {#if loading}
       <div class="state">Memuat pengguna...</div>
@@ -91,13 +132,27 @@
       <div class="state"><strong>Belum ada pengguna</strong><p>Akun yang terdaftar akan muncul di sini.</p></div>
     {:else}
       <div class="table-scroll"><table>
-        <thead><tr><th>Pengguna</th><th>Peran</th><th>Bergabung</th><th>Status akun</th></tr></thead>
+        <thead><tr><th>Pengguna</th><th>Peran</th><th>Bergabung</th><th>Status akun</th><th>Ubah peran</th><th>Ubah status</th></tr></thead>
         <tbody>{#each filtered as user (user.id)}
           <tr>
             <td><strong>{user.name}</strong><small>{user.email}</small></td>
             <td>{roleLabel(user.role)}</td>
             <td>{dateLabel(user.createdAt)}</td>
             <td><span class:active={user.status === "active"} class="status">{statusLabel(user.status)}</span></td>
+            <td>
+              <select aria-label={`Peran ${user.name}`} value={user.role} disabled={busyId === user.id || user.id === myId} title={user.id === myId ? "Anda tidak bisa mengubah akun sendiri" : ""} onchange={(e) => changeRole(user, e.currentTarget)}>
+                <option value="mahasiswa">Mahasiswa</option>
+                <option value="penyelenggara">Penyelenggara</option>
+                <option value="admin">Admin</option>
+              </select>
+            </td>
+            <td>
+              <select aria-label={`Status ${user.name}`} value={user.status} disabled={busyId === user.id || user.id === myId} title={user.id === myId ? "Anda tidak bisa mengubah akun sendiri" : ""} onchange={(e) => changeStatus(user, e.currentTarget)}>
+                <option value="pending_verification">Menunggu verifikasi</option>
+                <option value="active">Aktif</option>
+                <option value="suspended">Ditangguhkan</option>
+              </select>
+            </td>
           </tr>
         {/each}</tbody>
       </table></div>
@@ -113,4 +168,5 @@
   .table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap;font-size:12px}th,td{padding:15px;border-bottom:1px solid var(--border)}th{background:var(--surface);color:var(--muted)}td strong,td small{display:block}td strong{margin-bottom:5px}td small{color:var(--muted);font-size:10px}
   .status{padding:5px 9px;border-radius:20px;background:var(--warn-bg);color:var(--warn-text);font-size:10px}.status.active{background:var(--ok-bg);color:var(--ok-text)}.state{padding:42px 20px;text-align:center;color:var(--muted);font-size:12px}.state strong{color:var(--text)}.state p{line-height:1.6}.error{color:var(--err-text)}
   @media(max-width:700px){.stats{grid-template-columns:1fr}.filters{flex-direction:column}}
+  .notice{margin:0 18px 12px;padding:11px 14px;border:1px solid var(--border-strong);border-radius:8px;background:var(--ok-bg);color:var(--ok-text);font-size:11px}
 </style>

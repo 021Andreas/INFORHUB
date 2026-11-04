@@ -1,6 +1,5 @@
 
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { api } from '#lib/api.js';
   import Icon from '#lib/components/Icon.svelte';
@@ -19,15 +18,12 @@
   };
 
   let events = $state<EventItem[]>([]);
-  let role = $state<'admin' | 'penyelenggara'>('penyelenggara');
   let actionError = $state('');
   let actionBusy = $state<number | null>(null);
 
-  // Admin melihat semua acara; penyelenggara hanya acara miliknya (semua status).
+  // Admin melihat semua acara untuk dimoderasi.
   onMount(async () => {
     try {
-      const me = await api<{user:{role:'admin'|'penyelenggara'}}>('/api/auth/me');
-      role = me.user.role;
       events = await api<EventItem[]>('/api/admin/events?status=all');
     } catch (e) {
       actionError = e instanceof Error ? e.message : 'Gagal memuat acara.';
@@ -80,32 +76,20 @@
     }
   }
 
-  function createEvent() {
-    goto('/admin/acara/form');
-  }
-
-  function editEvent(id: number) {
-    goto(`/admin/acara/form?id=${id}`);
-  }
 </script>
 
 <svelte:head>
-  <title>Kelola Acara | INFORHUB Admin</title>
+  <title>Moderasi Acara | INFORHUB Admin</title>
 </svelte:head>
 
 <section class="events-page">
   <div class="heading">
     <div>
-      <div class="breadcrumb">{role === 'admin' ? 'Administrator / Moderasi Acara' : 'Penyelenggara / Acara Saya'}</div>
-      <h1>{role === 'admin' ? 'Moderasi Acara' : 'Acara Saya'}</h1>
-      <p>{role === 'admin' ? 'Periksa pengajuan acara dan tentukan apakah acara dapat dipublikasikan.' : 'Buat acara, perbarui informasi, atur kuota, dan pantau status pengajuan.'}</p>
+      <div class="breadcrumb">Administrator / Moderasi Acara</div>
+      <h1>Moderasi Acara</h1>
+      <p>Periksa pengajuan acara dan tentukan apakah acara dapat dipublikasikan.</p>
     </div>
 
-    {#if role === 'penyelenggara'}
-      <button class="primary-button" onclick={createEvent}>
-        <span>＋</span> Buat Acara
-      </button>
-    {/if}
   </div>
 
   {#if actionError}<div class="action-error" role="alert">{actionError}</div>{/if}
@@ -131,8 +115,8 @@
   <div class="panel">
     <div class="toolbar">
       <div>
-        <h2>{role === 'admin' ? 'Pengajuan Acara' : 'Daftar Acara Saya'}</h2>
-        <p>{role === 'admin' ? 'Acara berstatus menunggu persetujuan perlu ditinjau administrator.' : 'Daftar acara yang dikelola oleh akun penyelenggara ini.'}</p>
+        <h2>Pengajuan Acara</h2>
+        <p>Acara berstatus menunggu persetujuan perlu ditinjau administrator.</p>
       </div>
 
       <div class="filters">
@@ -191,8 +175,7 @@
                   </span>
                 </td>
                 <td>
-                  {#if role === 'admin'}
-                    {#if event.status === 'pending'}
+                                      {#if event.status === 'pending'}
                       <div class="moderation-actions">
                         <button class="approve-button" disabled={actionBusy === event.id} onclick={() => updateModeration(event, 'published')}>Setujui</button>
                         <button class="reject-button" disabled={actionBusy === event.id} onclick={() => updateModeration(event, 'rejected')}>Tolak</button>
@@ -200,9 +183,6 @@
                     {:else}
                       <span class="muted-action">Tidak perlu tindakan</span>
                     {/if}
-                  {:else}
-                    <button class="edit-button" onclick={() => editEvent(event.id)}>Edit</button>
-                  {/if}
                 </td>
               </tr>
             {/each}
@@ -216,13 +196,8 @@
         <p>
           {search || statusFilter !== 'all'
             ? 'Coba ubah kata kunci atau filter status.'
-            : 'Acara yang kamu buat akan tampil di halaman ini.'}
+            : 'Pengajuan acara dari penyelenggara akan tampil di halaman ini.'}
         </p>
-        {#if !search && statusFilter === 'all'}
-          <button class="primary-button" onclick={createEvent}>
-            ＋ Buat Acara Pertama
-          </button>
-        {/if}
       </div>
     {/if}
 
