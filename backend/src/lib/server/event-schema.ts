@@ -11,6 +11,8 @@ export const eventBodySchema = z.object({
   location: z.string().trim().min(2).max(255),
   quota: z.number().int().min(1).max(100000),
   certificateAvailable: z.boolean().optional(),
+  // Kosong/null = template default (lihat GET /api/certificate-templates)
+  certificateTemplateId: z.number().int().positive().nullable().optional(),
   // Batas akhir pendaftaran; null/kosong = tanpa batas.
   // (union dengan null dulu, karena z.coerce.date() mengubah null menjadi tahun 1970)
   deadline: z.union([z.null(), z.coerce.date()]).optional(),

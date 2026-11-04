@@ -33,9 +33,38 @@ export const users = mysqlTable("users", {
   verificationTokenHash: varchar("verification_token_hash", { length: 255 }),
   verificationExpiresAt: datetime("verification_expires_at", { mode: "date" }),
 
+  // F-02: identitas. NIM unik untuk mahasiswa; profil organisasi + verifikasi untuk penyelenggara.
+  nim: varchar("nim", { length: 20 }).unique(),
+  organizationName: varchar("organization_name", { length: 150 }),
+  verificationStatus: mysqlEnum("verification_status", ["none", "pending", "verified", "rejected"])
+    .notNull()
+    .default("none"),
+  verificationNote: varchar("verification_note", { length: 500 }),
+  verifiedAt: datetime("verified_at", { mode: "date" }),
+  verifiedBy: int("verified_by"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
+
+/* ------------------------------------------------------------------ */
+/* CERTIFICATE TEMPLATES (F-23): tiap "versi" adalah satu baris yang  */
+/* tidak diubah lagi, supaya sertifikat lama tetap merujuk template   */
+/* yang dipakai saat terbit.                                          */
+/* ------------------------------------------------------------------ */
+export const certificateTemplates = mysqlTable(
+  "certificate_templates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    version: int("version").notNull(),
+    config: text("config").notNull(), // JSON pengaturan elemen (lihat certificates/config.ts)
+    isDefault: boolean("is_default").notNull().default(false),
+    createdBy: int("created_by").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("template_name_version_unique").on(table.name, table.version)],
+);
 
 /* ------------------------------------------------------------------ */
 /* EVENT CATEGORIES (baru)                                             */
@@ -71,6 +100,8 @@ export const events = mysqlTable(
     certificateAvailable: boolean("certificate_available")
       .notNull()
       .default(false),
+    // Kosong = pakai template default
+    certificateTemplateId: int("certificate_template_id").references(() => certificateTemplates.id),
     status: mysqlEnum("status", [
       "draft",
       "pending",
@@ -168,6 +199,14 @@ export const certificates = mysqlTable("certificates", {
   filePath: varchar("file_path", { length: 500 }).notNull(),
   issuedBy: int("issued_by").references(() => users.id),
   issuedAt: timestamp("issued_at").defaultNow().notNull(),
+  // F-12: template (versi) yang dipakai saat terbit. Kosong = template bawaan kode.
+  templateId: int("template_id").references(() => certificateTemplates.id),
+  // F-25: kode acak untuk verifikasi publik (di dalam QR); sengaja terpisah dari nomor sertifikat.
+  verificationCode: varchar("verification_code", { length: 32 }).unique(),
+  status: mysqlEnum("status", ["valid", "revoked"]).notNull().default("valid"),
+  revokedAt: datetime("revoked_at", { mode: "date" }),
+  revokedReason: varchar("revoked_reason", { length: 255 }),
+  revokedBy: int("revoked_by").references(() => users.id),
 });
 
 /* ------------------------------------------------------------------ */
@@ -190,10 +229,59 @@ export const notifications = mysqlTable(
       "event_rejected",
       "event_reminder",
       "certificate_issued",
+      "certificate_revoked",
+      "event_updated",
+      "organizer_verified",
+      "organizer_rejected",
     ]).notNull(),
     message: varchar("message", { length: 500 }).notNull(),
     isRead: boolean("is_read").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("notifications_user_read_idx").on(table.userId, table.isRead)],
+);
+
+/* ------------------------------------------------------------------ */
+/* SAVED EVENTS (F-09)                                                 */
+/* ------------------------------------------------------------------ */
+export const savedEvents = mysqlTable(
+  "saved_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("user_id")
+      .notNull()
+      .references(() => users.id),
+    eventId: int("event_id")
+      .notNull()
+      .references(() => events.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("saved_user_event_unique").on(table.userId, table.eventId),
+    index("saved_user_idx").on(table.userId),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* EVENT REVIEWS (F-21): satu ulasan per peserta yang hadir            */
+/* ------------------------------------------------------------------ */
+export const eventReviews = mysqlTable(
+  "event_reviews",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    eventId: int("event_id")
+      .notNull()
+      .references(() => events.id),
+    userId: int("user_id")
+      .notNull()
+      .references(() => users.id),
+    rating: int("rating").notNull(), // 1..5 (divalidasi di aplikasi)
+    comment: text("comment"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("review_event_user_unique").on(table.eventId, table.userId),
+    index("review_event_idx").on(table.eventId),
+  ],
 );

@@ -2,7 +2,7 @@
 // ASUMSI: `db` di-export dari "$lib/server/db". Sesuaikan jika berbeda.
 
 import { randomBytes } from "node:crypto";
-import { and, count, eq, isNull, like } from "drizzle-orm";
+import { and, count, eq, gte, isNull, like, lte } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import {
   events,
@@ -14,21 +14,17 @@ import {
   users,
 } from "$lib/server/db/schema";
 import { isDuplicateError } from "$lib/server/db-errors";
+import { env } from "$env/dynamic/private";
+import { AppError, type Actor } from "$lib/server/errors";
+import type { CertificateConfig } from "$lib/server/certificates/config";
 import { registeredCount } from "./sql-helpers";
+import { resolveTemplate } from "./template.service";
 
 /* ------------------------------------------------------------------ */
-/* Tipe & error                                                        */
+/* Tipe & error (didefinisikan di errors.ts, di-export ulang di sini)  */
 /* ------------------------------------------------------------------ */
-export type Actor = { id: number; role: "mahasiswa" | "penyelenggara" | "admin" };
-
-export class AppError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { AppError } from "$lib/server/errors";
+export type { Actor } from "$lib/server/errors";
 
 const newTicketCode = () => randomBytes(16).toString("hex"); // 32 karakter
 
@@ -39,6 +35,8 @@ const newTicketCode = () => randomBytes(16).toString("hex"); // 32 karakter
 export async function listPublishedEvents(opts: {
   categoryId?: number;
   q?: string;
+  from?: Date;
+  to?: Date;
   limit?: number;
   offset?: number;
 } = {}) {
@@ -49,6 +47,9 @@ export async function listPublishedEvents(opts: {
     eq(events.status, "published"),
     opts.categoryId ? eq(events.categoryId, opts.categoryId) : undefined,
     opts.q ? like(events.title, `%${opts.q}%`) : undefined,
+    // F-10: acara yang berlangsung di dalam rentang (untuk tampilan kalender)
+    opts.from ? gte(events.endAt, opts.from) : undefined,
+    opts.to ? lte(events.startAt, opts.to) : undefined,
   );
 
   const items = await db
@@ -86,6 +87,11 @@ export async function listPublishedEvents(opts: {
 /* sama berjalan satu per satu dan kuota tidak bisa terlampaui.        */
 /* ------------------------------------------------------------------ */
 export async function registerForEvent(userId: number, eventId: number) {
+  if (env.REQUIRE_NIM === "true") {
+    const [u] = await db.select({ role: users.role, nim: users.nim }).from(users).where(eq(users.id, userId));
+    if (u?.role === "mahasiswa" && !u.nim)
+      throw new AppError(400, "Lengkapi NIM di profil sebelum mendaftar acara", "NIM_REQUIRED");
+  }
   return db.transaction(async (tx) => {
     const [event] = await tx
       .select()
@@ -308,7 +314,19 @@ export type CertificateData = {
   eventStart: Date;
   eventEnd: Date;
   location: string;
+  /** Pengaturan elemen dari template yang dipakai (F-23) */
+  config: CertificateConfig;
+  /** Kode acak untuk verifikasi publik, dan alamat yang dimuat di QR (F-25) */
+  verificationCode: string;
+  verifyUrl: string;
 };
+
+/** Alamat verifikasi di QR: halaman frontend bila VERIFY_PAGE_URL diisi, jika tidak endpoint API backend. */
+export function verifyUrlFor(code: string) {
+  const page = env.VERIFY_PAGE_URL?.replace(/\/$/, "");
+  if (page) return `${page}/${code}`;
+  return `${(env.PUBLIC_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/api/verify/${code}`;
+}
 export type CertificateStore = {
   /** Membuat dan menyimpan PDF; mengembalikan referensi (nama file / ID Google Drive). */
   save: (data: CertificateData) => Promise<string>;
@@ -354,6 +372,8 @@ export async function issueCertificate(actor: Actor, registrationId: number, sto
   if (dup) throw new AppError(409, "Sertifikat sudah diterbitkan");
 
   const certificateNumber = `CERT-${row.event.id}-${registrationId}-${new Date().getFullYear()}`;
+  const template = await resolveTemplate(row.event.certificateTemplateId);
+  const verificationCode = randomBytes(16).toString("hex"); // 128 bit, tidak bisa ditebak
   const ref = await store.save({
     certificateNumber,
     participantName: row.participantName,
@@ -361,6 +381,9 @@ export async function issueCertificate(actor: Actor, registrationId: number, sto
     eventStart: row.event.startAt,
     eventEnd: row.event.endAt,
     location: row.event.location,
+    config: template.config,
+    verificationCode,
+    verifyUrl: verifyUrlFor(verificationCode),
   });
 
   try {
@@ -370,6 +393,8 @@ export async function issueCertificate(actor: Actor, registrationId: number, sto
         certificateNumber,
         filePath: ref,
         issuedBy: actor.id,
+        templateId: template.id,
+        verificationCode,
       });
       await tx.insert(notifications).values({
         userId: row.reg.userId,
@@ -461,5 +486,8 @@ export async function getCertificateForDownload(actor: Actor, certificateId: num
     row.reg.userId === actor.id ||
     row.event.organizerId === actor.id;
   if (!allowed) throw new AppError(403, "Anda tidak berhak mengunduh sertifikat ini");
+  const isStaff = actor.role === "admin" || row.event.organizerId === actor.id;
+  if (row.cert.status === "revoked" && !isStaff)
+    throw new AppError(410, "Sertifikat ini telah dicabut", "CERTIFICATE_REVOKED");
   return row.cert;
 }

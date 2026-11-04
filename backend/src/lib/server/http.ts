@@ -6,7 +6,8 @@ type Role = Actor["role"];
 
 /** Ubah error apa pun menjadi respons JSON yang rapi. */
 export function errorResponse(e: unknown) {
-  if (e instanceof AppError) return json({ error: e.message }, { status: e.status });
+  if (e instanceof AppError)
+    return json(e.code ? { error: e.message, code: e.code } : { error: e.message }, { status: e.status });
   if (e instanceof z.ZodError) {
     // Pesan ringkas yang langsung menunjuk field bermasalah; rincian lengkap ada di `details`
     const first = e.issues
@@ -58,6 +59,9 @@ export function requireUser(locals: App.Locals): Actor {
 export function requireRole(locals: App.Locals, ...roles: Role[]): Actor {
   const actor = requireUser(locals);
   if (!roles.includes(actor.role)) throw new AppError(403, "Anda tidak punya akses");
+  // F-19: penyelenggara baru boleh bertindak setelah diverifikasi admin
+  if (actor.role === "penyelenggara" && locals.user?.verificationStatus !== "verified")
+    throw new AppError(403, "Akun penyelenggara Anda belum diverifikasi admin", "ORGANIZER_NOT_VERIFIED");
   return actor;
 }
 
@@ -73,6 +77,25 @@ export function parsePaging(url: URL, defaultLimit = 20, maxLimit = 100) {
   const raw = Math.floor(Number(url.searchParams.get("limit"))) || defaultLimit;
   const limit = Math.min(maxLimit, Math.max(1, raw));
   return { page, limit, offset: (page - 1) * limit };
+}
+
+/**
+ * ?from=&to= (ISO atau YYYY-MM-DD). `to` berbentuk tanggal saja berarti sampai akhir hari itu (UTC).
+ * Dipakai untuk tampilan kalender: acara yang berlangsung di dalam rentang tsb.
+ */
+export function parseRange(url: URL): { from?: Date; to?: Date } {
+  const read = (name: string, endOfDay: boolean) => {
+    const v = url.searchParams.get(name);
+    if (!v) return undefined;
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) throw new AppError(400, `Parameter ${name} bukan tanggal yang valid`);
+    if (endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(v)) d.setUTCHours(23, 59, 59, 999);
+    return d;
+  };
+  const from = read("from", false);
+  const to = read("to", true);
+  if (from && to && to < from) throw new AppError(400, "Parameter to harus setelah from");
+  return { from, to };
 }
 
 /** Ambil query param bertipe enum; nilai tidak valid -> 400. */

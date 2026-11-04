@@ -1,5 +1,5 @@
 // Query baca (GET): detail acara, riwayat, peserta, rekap, notifikasi, admin.
-import { and, asc, count, desc, eq, like, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, like, lte, or, sql } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import {
   attendance,
@@ -8,6 +8,7 @@ import {
   events,
   notifications,
   registrations,
+  savedEvents,
   users,
 } from "$lib/server/db/schema";
 import { AppError, type Actor } from "./event.service";
@@ -44,6 +45,8 @@ export async function getEventDetail(viewer: Actor | null, eventId: number) {
       rejectionReason: events.rejectionReason,
       publishedAt: events.publishedAt,
       registered: registeredCount(),
+      ratingAverage: sql<string | null>`(select round(avg(rv.rating), 2) from event_reviews as rv where rv.event_id = events.id)`,
+      ratingCount: sql<number>`(select count(*) from event_reviews as rv where rv.event_id = events.id)`.mapWith(Number),
     })
     .from(events)
     .leftJoin(eventCategories, eq(eventCategories.id, events.categoryId))
@@ -68,10 +71,21 @@ export async function getEventDetail(viewer: Actor | null, eventId: number) {
     }
   }
 
+  let saved = false;
+  if (viewer) {
+    const [sv] = await db
+      .select({ id: savedEvents.id })
+      .from(savedEvents)
+      .where(and(eq(savedEvents.userId, viewer.id), eq(savedEvents.eventId, eventId)));
+    saved = !!sv;
+  }
+
   const remaining = Math.max(row.quota - row.registered, 0);
   const now = new Date();
   return {
     ...row,
+    ratingAverage: row.ratingAverage === null ? null : Number(row.ratingAverage),
+    saved,
     rejectionReason: isStaff ? row.rejectionReason : null,
     remaining,
     // true jika saat ini orang bisa mendaftar (published, belum lewat batas, masih ada kuota)
@@ -85,7 +99,10 @@ export async function getEventDetail(viewer: Actor | null, eventId: number) {
 }
 
 /* ---------------- riwayat pendaftaran milik user ---------------- */
-export async function listMyRegistrations(userId: number) {
+export async function listMyRegistrations(
+  userId: number,
+  opts: { attended?: boolean; from?: Date; to?: Date } = {},
+) {
   const rows = await db
     .select({
       id: registrations.id,
@@ -110,7 +127,15 @@ export async function listMyRegistrations(userId: number) {
     .innerJoin(events, eq(events.id, registrations.eventId))
     .leftJoin(attendance, eq(attendance.registrationId, registrations.id))
     .leftJoin(certificates, eq(certificates.registrationId, registrations.id))
-    .where(eq(registrations.userId, userId))
+    .where(
+      and(
+        eq(registrations.userId, userId),
+        // F-11: hanya acara yang benar-benar dihadiri (presensi tercatat) dan pendaftarannya masih aktif
+        opts.attended ? and(eq(registrations.status, "registered"), eq(attendance.status, "present")) : undefined,
+        opts.from ? gte(events.endAt, opts.from) : undefined,
+        opts.to ? lte(events.startAt, opts.to) : undefined,
+      ),
+    )
     .orderBy(desc(registrations.registeredAt), desc(registrations.id));
 
   return rows.map((r) => ({
@@ -127,6 +152,7 @@ export async function listMyCertificates(userId: number) {
       id: certificates.id,
       certificateNumber: certificates.certificateNumber,
       issuedAt: certificates.issuedAt,
+      status: certificates.status,
       eventId: events.id,
       eventTitle: events.title,
       eventStartAt: events.startAt,
@@ -162,12 +188,14 @@ export async function listParticipants(
       userId: users.id,
       name: users.name,
       email: users.email,
+      nim: users.nim,
       status: registrations.status,
       registeredAt: registrations.registeredAt,
       cancelledAt: registrations.cancelledAt,
       attendanceStatus: attendance.status,
       checkedAt: attendance.checkedAt,
       certificateId: certificates.id,
+      certificateNumber: certificates.certificateNumber,
     })
     .from(registrations)
     .innerJoin(users, eq(users.id, registrations.userId))
@@ -264,9 +292,14 @@ const ownerScope = (actor: Actor) =>
 export async function listAdminEvents(
   actor: Actor,
   status: EventStatus | "all",
-  opts: { limit: number; offset: number },
+  opts: { limit: number; offset: number; from?: Date; to?: Date },
 ) {
-  const where = and(status === "all" ? undefined : eq(events.status, status), ownerScope(actor));
+  const where = and(
+    status === "all" ? undefined : eq(events.status, status),
+    ownerScope(actor),
+    opts.from ? gte(events.endAt, opts.from) : undefined,
+    opts.to ? lte(events.startAt, opts.to) : undefined,
+  );
   const items = await db
     .select({
       id: events.id,
@@ -358,6 +391,7 @@ export async function listAdminCertificates(
       eventStatus: events.status,
       certificateId: certificates.id,
       certificateNumber: certificates.certificateNumber,
+      certificateStatus: certificates.status,
       issuedAt: certificates.issuedAt,
     })
     .from(registrations)
@@ -404,6 +438,9 @@ const userColumns = {
   email: users.email,
   role: users.role,
   status: users.status,
+  nim: users.nim,
+  organizationName: users.organizationName,
+  verificationStatus: users.verificationStatus,
   createdAt: users.createdAt,
 };
 
@@ -411,13 +448,17 @@ export async function listUsers(opts: {
   q?: string;
   role?: Role;
   status?: UserStatus;
+  verification?: "none" | "pending" | "verified" | "rejected";
   limit: number;
   offset: number;
 }) {
   const where = and(
-    opts.q ? or(like(users.name, `%${opts.q}%`), like(users.email, `%${opts.q}%`)) : undefined,
+    opts.q
+      ? or(like(users.name, `%${opts.q}%`), like(users.email, `%${opts.q}%`), like(users.nim, `%${opts.q}%`))
+      : undefined,
     opts.role ? eq(users.role, opts.role) : undefined,
     opts.status ? eq(users.status, opts.status) : undefined,
+    opts.verification ? eq(users.verificationStatus, opts.verification) : undefined,
   );
   const items = await db
     .select(userColumns) // passwordHash dan field token verifikasi sengaja tidak dipilih
@@ -437,10 +478,26 @@ export async function updateUser(
 ) {
   if (targetId === actor.id)
     throw new AppError(400, "Anda tidak bisa mengubah role atau status akun sendiri");
-  const [target] = await db.select({ id: users.id }).from(users).where(eq(users.id, targetId));
-  if (!target) throw new AppError(404, "Pengguna tidak ditemukan");
+  // F-19: role administrator ditetapkan secara khusus, bukan lewat API
+  if (patch.role === "admin")
+    throw new AppError(403, "Role admin tidak dapat diberikan lewat API. Gunakan skrip promote-admin di server.", "ADMIN_ROLE_RESTRICTED");
 
-  await db.update(users).set(patch).where(eq(users.id, targetId));
+  const [target] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, targetId));
+  if (!target) throw new AppError(404, "Pengguna tidak ditemukan");
+  if (target.role === "admin" && patch.role !== undefined)
+    throw new AppError(403, "Role akun admin tidak dapat diubah lewat API", "ADMIN_ROLE_RESTRICTED");
+
+  const set: Partial<typeof users.$inferInsert> = { ...patch };
+  if (patch.role === "penyelenggara") {
+    // admin yang menetapkan role ini sekaligus menjadi pihak yang memverifikasi
+    set.verificationStatus = "verified";
+    set.verifiedAt = new Date();
+    set.verifiedBy = actor.id;
+    set.verificationNote = null;
+  } else if (patch.role === "mahasiswa" && target.role === "penyelenggara") {
+    set.verificationStatus = "none";
+  }
+  await db.update(users).set(set).where(eq(users.id, targetId));
   const [updated] = await db.select(userColumns).from(users).where(eq(users.id, targetId));
   return { user: updated };
 }

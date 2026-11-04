@@ -1,6 +1,6 @@
 import { and, count, eq } from "drizzle-orm";
 import { db } from "$lib/server/db";
-import { eventCategories, events, notifications, registrations } from "$lib/server/db/schema";
+import { certificateTemplates, eventCategories, events, notifications, registrations } from "$lib/server/db/schema";
 import { AppError, type Actor } from "./event.service";
 
 export type EventInput = {
@@ -13,6 +13,7 @@ export type EventInput = {
   location: string;
   quota: number;
   certificateAvailable?: boolean;
+  certificateTemplateId?: number | null;
   deadline?: Date | null;
 };
 
@@ -23,6 +24,12 @@ async function assertCategory(id: number | null | undefined) {
     .from(eventCategories)
     .where(eq(eventCategories.id, id));
   if (!cat) throw new AppError(400, "Kategori tidak ditemukan");
+}
+
+async function assertTemplate(id: number | null | undefined) {
+  if (!id) return;
+  const [t] = await db.select({ id: certificateTemplates.id }).from(certificateTemplates).where(eq(certificateTemplates.id, id));
+  if (!t) throw new AppError(400, "Template sertifikat tidak ditemukan");
 }
 
 function assertDates(d: { startAt: Date; endAt: Date; deadline?: Date | null }) {
@@ -41,6 +48,7 @@ export async function createEvent(
     throw new AppError(403, "Hanya admin yang boleh langsung mempublikasikan acara");
   assertDates(input);
   await assertCategory(input.categoryId);
+  await assertTemplate(input.certificateTemplateId);
 
   const now = new Date();
   const [res] = await db.insert(events).values({
@@ -54,6 +62,7 @@ export async function createEvent(
     location: input.location,
     quota: input.quota,
     certificateAvailable: input.certificateAvailable ?? false,
+    certificateTemplateId: input.certificateTemplateId ?? null,
     registrationDeadline: input.deadline ?? null,
     status,
     ...(status === "published" ? { reviewedBy: actor.id, reviewedAt: now, publishedAt: now } : {}),
@@ -87,6 +96,7 @@ export async function updateEvent(actor: Actor, eventId: number, patch: Partial<
       deadline: patch.deadline === undefined ? ev.registrationDeadline : patch.deadline,
     });
     if (patch.categoryId !== undefined) await assertCategory(patch.categoryId);
+    if (patch.certificateTemplateId !== undefined) await assertTemplate(patch.certificateTemplateId);
 
     if (patch.quota !== undefined) {
       const [{ n }] = await tx
@@ -107,10 +117,33 @@ export async function updateEvent(actor: Actor, eventId: number, patch: Partial<
     if (patch.location !== undefined) set.location = patch.location;
     if (patch.quota !== undefined) set.quota = patch.quota;
     if (patch.certificateAvailable !== undefined) set.certificateAvailable = patch.certificateAvailable;
+    if (patch.certificateTemplateId !== undefined) set.certificateTemplateId = patch.certificateTemplateId;
     if (patch.deadline !== undefined) set.registrationDeadline = patch.deadline;
     if (Object.keys(set).length === 0) throw new AppError(400, "Tidak ada perubahan yang dikirim");
 
     await tx.update(events).set(set).where(eq(events.id, eventId));
+
+    // F-08: peserta terdaftar diberi tahu bila jadwal atau lokasi acara yang sudah terbit berubah
+    if (ev.status === "published") {
+      const when = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" });
+      const parts: string[] = [];
+      const newStart = patch.startAt ?? ev.startAt;
+      const newEnd = patch.endAt ?? ev.endAt;
+      if (+newStart !== +ev.startAt || +newEnd !== +ev.endAt) parts.push(`Jadwal baru: ${when.format(newStart)} WIB`);
+      if (patch.location !== undefined && patch.location !== ev.location) parts.push(`Lokasi baru: ${patch.location}`);
+      if (parts.length) {
+        const regs = await tx
+          .select({ userId: registrations.userId })
+          .from(registrations)
+          .where(and(eq(registrations.eventId, eventId), eq(registrations.status, "registered")));
+        if (regs.length) {
+          const message = `Acara "${patch.title ?? ev.title}" diperbarui. ${parts.join("; ")}.`.slice(0, 500);
+          await tx
+            .insert(notifications)
+            .values(regs.map((r) => ({ userId: r.userId, eventId, type: "event_updated" as const, message })));
+        }
+      }
+    }
     return { ok: true };
   });
 }

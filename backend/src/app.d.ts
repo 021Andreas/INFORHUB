@@ -7,6 +7,9 @@ declare global {
         name: string;
         email: string;
         role: "mahasiswa" | "penyelenggara" | "admin";
+        nim: string | null;
+        organizationName: string | null;
+        verificationStatus: "none" | "pending" | "verified" | "rejected";
       } | null;
     }
   }

@@ -15,6 +15,9 @@ export type SessionUser = {
   name: string;
   email: string;
   role: "mahasiswa" | "penyelenggara" | "admin";
+  nim: string | null;
+  organizationName: string | null;
+  verificationStatus: "none" | "pending" | "verified" | "rejected";
 };
 
 function getSecret() {
@@ -88,10 +91,21 @@ export async function getSessionUser(cookies: Cookies): Promise<SessionUser | nu
       email: users.email,
       role: users.role,
       status: users.status,
+      nim: users.nim,
+      organizationName: users.organizationName,
+      verificationStatus: users.verificationStatus,
     })
     .from(users)
     .where(eq(users.id, userId));
 
   if (!u || u.status !== "active") return null;
-  return { id: u.id, name: u.name, email: u.email, role: u.role };
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    nim: u.nim,
+    organizationName: u.organizationName,
+    verificationStatus: u.verificationStatus,
+  };
 }
