@@ -26,6 +26,11 @@ INFORHUB juga dilengkapi fitur Sertifikat Digital dengan Nomor Unik dan QR Code 
   <b>INFORHUB — Informasi Lebih Mudah, Kegiatan Lebih Terarah! 🚀</b>
 </p>
 
+<h1 align="center">BAB I</h1>
+<h2 align="center">PENDAHULUAN</h2>
+
+
+
 # 1.1 Latar Belakang
 
 <div align="justify">
