@@ -43,10 +43,22 @@ Berdasarkan permasalahan tersebut, pengelolaan informasi kegiatan, identitas mah
 </div>
 
 
-1.2 Rumusan Masalah
-1.	Bagaimana mengelola informasi kegiatan kampus agar dapat diakses oleh mahasiswa secara terpusat?
-2.	Bagaimana mengelola pendaftaran, kuota, status pendaftaran, dan riwayat keikutsertaan peserta secara terstruktur?
-3.	Bagaimana membedakan identitas setiap mahasiswa agar data pendaftaran, kehadiran, dan sertifikat tidak tertukar?
-4.	Bagaimana mengatur hak akses mahasiswa, penyelenggara, dan administrator sesuai dengan tugas dan kewenangan masing-masing?
-5.	Bagaimana menyediakan template sertifikat yang seragam untuk penerbitan sertifikat kegiatan?
-6.	Bagaimana memastikan keaslian sertifikat digital melalui QR Code yang dapat diverifikasi?
+## 1.2 Rumusan Masalah
+
+Berdasarkan latar belakang yang telah diuraikan, rumusan masalah dalam pengembangan sistem ini adalah sebagai berikut:
+
+<div align="justify">
+
+1. Bagaimana mengelola informasi kegiatan kampus agar dapat diakses oleh mahasiswa secara terpusat?
+
+2. Bagaimana mengelola pendaftaran, kuota, status pendaftaran, dan riwayat keikutsertaan peserta secara terstruktur?
+
+3. Bagaimana membedakan identitas setiap mahasiswa agar data pendaftaran, kehadiran, dan sertifikat tidak tertukar?
+
+4. Bagaimana mengatur hak akses mahasiswa, penyelenggara, dan administrator sesuai dengan tugas dan kewenangan masing-masing?
+
+5. Bagaimana menyediakan template sertifikat yang seragam untuk penerbitan sertifikat kegiatan?
+
+6. Bagaimana memastikan keaslian sertifikat digital melalui QR Code yang dapat diverifikasi?
+
+</div>
