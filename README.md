@@ -28,6 +28,8 @@ INFORHUB juga dilengkapi fitur Sertifikat Digital dengan Nomor Unik dan QR Code 
 
 # 1.1 Latar Belakang
 
+<div align="justify">
+
 Kegiatan akademik dan nonakademik merupakan bagian penting dalam pengembangan pengetahuan, keterampilan, dan pengalaman mahasiswa Program Studi Informatika. Berbagai kegiatan, seperti seminar, pelatihan, lokakarya, kuliah tamu, dan kompetisi, memberikan kesempatan kepada mahasiswa untuk memperoleh pengetahuan serta pengalaman di luar kegiatan perkuliahan. Namun, informasi mengenai kegiatan tersebut dapat tersebar melalui berbagai media, seperti grup percakapan, media sosial, poster digital, dan pengumuman dari penyelenggara. Kondisi ini menyebabkan mahasiswa mengalami kesulitan dalam menemukan informasi kegiatan secara lengkap dan mengetahui perubahan informasi yang disampaikan.
 
 Permasalahan juga dapat terjadi dalam proses pendaftaran dan pendataan peserta kegiatan. Penggunaan mekanisme pendaftaran yang berbeda pada setiap kegiatan dapat menyebabkan data mahasiswa tercatat secara terpisah dan menyulitkan penyelenggara dalam mengelola daftar peserta. Selain itu, identitas mahasiswa perlu dibedakan secara tepat agar data pendaftaran, kehadiran, dan riwayat keikutsertaan tidak tertukar antara satu mahasiswa dengan mahasiswa lainnya. Ketidakakuratan dalam pendataan dapat memengaruhi proses administrasi dan penentuan peserta yang berhak memperoleh sertifikat.
@@ -37,6 +39,9 @@ Penerbitan sertifikat kegiatan juga memiliki beberapa kendala, terutama dalam ha
 Selain masalah penerbitan, keaslian sertifikat menjadi hal yang perlu diperhatikan. Sertifikat dalam bentuk digital relatif mudah disalin atau dibagikan, sedangkan pemeriksaan keasliannya dapat menjadi sulit apabila tidak tersedia mekanisme verifikasi yang memadai. Pihak yang menerima sertifikat, seperti panitia, institusi, atau pihak lain yang berkepentingan, membutuhkan cara untuk memastikan bahwa sertifikat benar-benar diterbitkan untuk peserta yang bersangkutan dan sesuai dengan kegiatan yang tercantum. Tanpa identitas sertifikat yang unik dan mekanisme pemeriksaan yang jelas, risiko penggunaan sertifikat yang tidak valid dapat meningkat.
 
 Berdasarkan permasalahan tersebut, pengelolaan informasi kegiatan, identitas mahasiswa, data pendaftaran, serta penerbitan dan verifikasi sertifikat merupakan aspek yang perlu mendapatkan perhatian dalam penyelenggaraan kegiatan di lingkungan perguruan tinggi. Permasalahan tersebut menjadi dasar untuk mengidentifikasi kebutuhan pengelolaan kegiatan yang lebih terstruktur, akurat, dan dapat dipertanggungjawabkan.
+
+</div>
+
 
 1.2 Rumusan Masalah
 1.	Bagaimana mengelola informasi kegiatan kampus agar dapat diakses oleh mahasiswa secara terpusat?
