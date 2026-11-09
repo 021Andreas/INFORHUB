@@ -62,3 +62,45 @@ Berdasarkan latar belakang yang telah diuraikan, rumusan masalah dalam pengemban
 6. Bagaimana memastikan keaslian sertifikat digital melalui QR Code yang dapat diverifikasi?
 
 </div>
+
+## 1.3 Solusi Digital
+
+<div align="justify">
+
+Solusi digital yang diusulkan adalah **AKSIKAMPUS**, yaitu aplikasi berbasis web dan mobile untuk memusatkan informasi kegiatan kampus, pendaftaran peserta, pengelolaan acara, serta distribusi sertifikat digital. Tiga role utama yang digunakan adalah Mahasiswa/Peserta, Penyelenggara, dan Administrator. Fitur MVP merupakan fitur inti yang diprioritaskan pada versi awal, sedangkan fitur lanjutan dapat dikembangkan setelah kebutuhan utama berjalan.
+
+</div>
+
+### Daftar Fitur Sistem
+
+| ID Fitur | Nama Fitur | Deskripsi | Prioritas | Pengguna |
+|---|---|---|---|---|
+| F-01 | Registrasi dan Login | Pengguna dapat membuat akun dan masuk ke sistem sesuai hak aksesnya. | MVP | Semua role |
+| F-02 | Profil dan Identitas Pengguna | Mahasiswa memiliki NIM unik; penyelenggara memiliki profil organisasi/unit dan status verifikasi. | MVP | Mahasiswa, Penyelenggara |
+| F-03 | Beranda dan Daftar Acara | Menampilkan daftar kegiatan kampus yang tersedia. | MVP | Mahasiswa |
+| F-04 | Pencarian dan Filter Acara | Memudahkan pencarian kegiatan berdasarkan kata kunci atau kategori. | MVP | Mahasiswa |
+| F-05 | Detail Acara | Menampilkan informasi kegiatan, seperti nama, jadwal, lokasi, kuota, dan penyelenggara. | MVP | Mahasiswa |
+| F-06 | Pendaftaran Acara | Mahasiswa dapat mendaftarkan diri pada kegiatan yang tersedia. | MVP | Mahasiswa |
+| F-07 | Status Pendaftaran | Menampilkan status pendaftaran serta riwayat pendaftaran mahasiswa. | MVP | Mahasiswa |
+| F-08 | Notifikasi | Membuat notifikasi dalam aplikasi untuk perubahan jadwal dan status penting. | Lanjutan | Mahasiswa |
+| F-09 | Daftar Acara Tersimpan | Mahasiswa dapat menyimpan kegiatan yang ingin dilihat kembali. | Lanjutan | Mahasiswa |
+| F-10 | Kalender Kegiatan | Menampilkan jadwal kegiatan dalam bentuk kalender. | Lanjutan | Mahasiswa |
+| F-11 | Riwayat Keikutsertaan | Berfokus pada acara yang benar-benar dihadiri berdasarkan presensi. | MVP | Mahasiswa |
+| F-12 | Unduh Sertifikat | Sistem membuat PDF dari template dan catatan penerbitan. | MVP | Mahasiswa |
+| F-13 | Buat dan Edit Acara | Menambahkan status draf, diajukan, disetujui, ditolak, dan dipublikasikan. | MVP | Penyelenggara |
+| F-14 | Kelola Kuota dan Pendaftar | Menambahkan validasi kuota dan status pendaftaran. | MVP | Penyelenggara |
+| F-15 | Validasi Kehadiran | QR Code presensi, validasi peserta terdaftar, dan pencegahan presensi ganda. | MVP | Penyelenggara |
+| F-16 | Penerbitan Sertifikat Otomatis | Mengubah proses unggah sertifikat menjadi penerbitan sertifikat otomatis berbasis template. | MVP | Penyelenggara |
+| F-17 | Rekap dan Ekspor Peserta | Penyelenggara dapat melihat rekap dan mengekspor data peserta. | Lanjutan | Penyelenggara |
+| F-18 | Moderasi Acara | Administrator menyetujui atau menolak pengajuan acara. | MVP | Administrator |
+| F-19 | Kelola Akun dan Role | Role administrator ditetapkan secara khusus; penyelenggara harus diverifikasi. | MVP | Administrator |
+| F-20 | Laporan Aktivitas Platform | Administrator dapat melihat laporan aktivitas platform. | Lanjutan | Administrator |
+| F-21 | Integrasi Kalender Eksternal | Mahasiswa dapat mengintegrasikan jadwal kegiatan dengan kalender eksternal. | Lanjutan | Mahasiswa |
+| F-22 | Template Sertifikat | Menambahkan versi template dan pengaturan elemen sertifikat. | MVP | Administrator |
+| F-23 | Penerbitan Sertifikat | Penyelenggara menerbitkan sertifikat secara massal kepada peserta yang memenuhi syarat. | MVP | Penyelenggara |
+| F-24 | Verifikasi QR Code | Halaman publik menampilkan data minimum dan status sertifikat valid atau dicabut. | MVP | Semua role |
+
+### Keterangan Prioritas
+
+- **MVP (Minimum Viable Product):** Fitur inti yang wajib tersedia pada versi awal sistem.
+- **Lanjutan:** Fitur tambahan yang dapat dikembangkan setelah fitur utama berjalan dengan baik.
