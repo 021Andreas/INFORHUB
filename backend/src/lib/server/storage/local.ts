@@ -7,6 +7,7 @@ import type { Kind, Storage } from "./index";
 const dirs: Record<Kind, () => string> = {
   poster: () => path.resolve(env.UPLOAD_DIR ?? "storage/posters"),
   certificate: () => path.resolve(env.CERT_DIR ?? "storage/certificates"),
+  asset: () => path.resolve(env.ASSET_DIR ?? "storage/assets"),
 };
 
 const MIME: Record<string, string> = {

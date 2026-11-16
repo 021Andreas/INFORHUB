@@ -17,6 +17,7 @@ import { isDuplicateError } from "$lib/server/db-errors";
 import { env } from "$env/dynamic/private";
 import { AppError, type Actor } from "$lib/server/errors";
 import type { CertificateConfig } from "$lib/server/certificates/config";
+import type { CertificateLayout } from "$lib/server/certificates/layout";
 import { registeredCount } from "./sql-helpers";
 import { resolveTemplate } from "./template.service";
 
@@ -316,6 +317,10 @@ export type CertificateData = {
   location: string;
   /** Pengaturan elemen dari template yang dipakai (F-23) */
   config: CertificateConfig;
+  /** Desain bebas (bila template dibuat dengan editor visual); null = pakai `config` */
+  layout: CertificateLayout | null;
+  organizerName: string;
+  issuedAt: Date;
   /** Kode acak untuk verifikasi publik, dan alamat yang dimuat di QR (F-25) */
   verificationCode: string;
   verifyUrl: string;
@@ -373,6 +378,10 @@ export async function issueCertificate(actor: Actor, registrationId: number, sto
 
   const certificateNumber = `CERT-${row.event.id}-${registrationId}-${new Date().getFullYear()}`;
   const template = await resolveTemplate(row.event.certificateTemplateId);
+  const [organizer] = await db
+    .select({ name: users.name, organizationName: users.organizationName })
+    .from(users)
+    .where(eq(users.id, row.event.organizerId));
   const verificationCode = randomBytes(16).toString("hex"); // 128 bit, tidak bisa ditebak
   const ref = await store.save({
     certificateNumber,
@@ -382,6 +391,9 @@ export async function issueCertificate(actor: Actor, registrationId: number, sto
     eventEnd: row.event.endAt,
     location: row.event.location,
     config: template.config,
+    layout: template.layout,
+    organizerName: organizer?.organizationName ?? organizer?.name ?? "",
+    issuedAt: new Date(),
     verificationCode,
     verifyUrl: verifyUrlFor(verificationCode),
   });

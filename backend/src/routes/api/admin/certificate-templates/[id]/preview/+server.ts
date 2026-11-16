@@ -8,7 +8,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   try {
     requireRole(locals, "admin");
     const t = await getTemplate(parseId(params.id));
-    const bytes = await renderPreview(t.config);
+    const bytes = await renderPreview(t.config, t.layout);
     return new Response(bytes as BodyInit, {
       headers: { "Content-Type": "application/pdf", "Content-Disposition": 'inline; filename="pratinjau.pdf"', "Cache-Control": "no-store" },
     });

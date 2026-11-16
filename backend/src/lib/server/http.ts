@@ -15,7 +15,14 @@ export function errorResponse(e: unknown) {
       .map((i) => `${i.path.join(".") || "body"}: ${i.message}`)
       .join("; ");
     return json(
-      { error: `Data tidak valid (${first})`, details: z.flattenError(e) },
+      {
+        error: `Data tidak valid (${first})`,
+        details: {
+          ...z.flattenError(e),
+          // path lengkap, mis. ["layout","elements",3,"text"], supaya editor dapat menandai elemen yang bermasalah
+          issues: e.issues.slice(0, 25).map((i) => ({ path: i.path, message: i.message })),
+        },
+      },
       { status: 400 },
     );
   }

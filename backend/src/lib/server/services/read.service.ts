@@ -4,6 +4,7 @@ import { db } from "$lib/server/db";
 import {
   attendance,
   certificates,
+  certificateTemplateSubmissions,
   eventCategories,
   events,
   notifications,
@@ -414,7 +415,7 @@ export async function listAdminCertificates(
 
 export async function getAdminStats() {
   const one = async (q: Promise<{ n: number }[]>) => (await q)[0].n;
-  const [totalEvents, publishedEvents, pendingEvents, totalRegistrations, totalPresent, totalUsers] =
+  const [totalEvents, publishedEvents, pendingEvents, totalRegistrations, totalPresent, totalUsers, pendingTemplateSubmissions] =
     await Promise.all([
       one(db.select({ n: count() }).from(events)),
       one(db.select({ n: count() }).from(events).where(eq(events.status, "published"))),
@@ -428,8 +429,9 @@ export async function getAdminStats() {
           .where(and(eq(attendance.status, "present"), eq(registrations.status, "registered"))),
       ),
       one(db.select({ n: count() }).from(users)),
+      one(db.select({ n: count() }).from(certificateTemplateSubmissions).where(eq(certificateTemplateSubmissions.status, "pending"))),
     ]);
-  return { totalEvents, publishedEvents, pendingEvents, totalRegistrations, totalPresent, totalUsers };
+  return { totalEvents, publishedEvents, pendingEvents, totalRegistrations, totalPresent, totalUsers, pendingTemplateSubmissions };
 }
 
 const userColumns = {

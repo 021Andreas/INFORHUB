@@ -2,7 +2,7 @@ import { env } from "$env/dynamic/private";
 import { drive } from "./drive";
 import { local } from "./local";
 
-export type Kind = "poster" | "certificate";
+export type Kind = "poster" | "certificate" | "asset";
 
 /**
  * Penyimpanan file. `put` mengembalikan referensi (nama file untuk driver lokal,

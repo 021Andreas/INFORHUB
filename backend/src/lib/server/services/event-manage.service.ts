@@ -1,6 +1,7 @@
 import { and, count, eq } from "drizzle-orm";
 import { db } from "$lib/server/db";
-import { certificateTemplates, eventCategories, events, notifications, registrations } from "$lib/server/db/schema";
+import { eventCategories, events, notifications, registrations } from "$lib/server/db/schema";
+import { assertTemplateUsable } from "./template.service";
 import { AppError, type Actor } from "./event.service";
 
 export type EventInput = {
@@ -26,12 +27,6 @@ async function assertCategory(id: number | null | undefined) {
   if (!cat) throw new AppError(400, "Kategori tidak ditemukan");
 }
 
-async function assertTemplate(id: number | null | undefined) {
-  if (!id) return;
-  const [t] = await db.select({ id: certificateTemplates.id }).from(certificateTemplates).where(eq(certificateTemplates.id, id));
-  if (!t) throw new AppError(400, "Template sertifikat tidak ditemukan");
-}
-
 function assertDates(d: { startAt: Date; endAt: Date; deadline?: Date | null }) {
   if (d.endAt <= d.startAt) throw new AppError(400, "Waktu selesai harus setelah waktu mulai");
   if (d.deadline && d.deadline > d.startAt)
@@ -48,7 +43,7 @@ export async function createEvent(
     throw new AppError(403, "Hanya admin yang boleh langsung mempublikasikan acara");
   assertDates(input);
   await assertCategory(input.categoryId);
-  await assertTemplate(input.certificateTemplateId);
+  if (input.certificateTemplateId) await assertTemplateUsable(actor, input.certificateTemplateId);
 
   const now = new Date();
   const [res] = await db.insert(events).values({
@@ -96,7 +91,7 @@ export async function updateEvent(actor: Actor, eventId: number, patch: Partial<
       deadline: patch.deadline === undefined ? ev.registrationDeadline : patch.deadline,
     });
     if (patch.categoryId !== undefined) await assertCategory(patch.categoryId);
-    if (patch.certificateTemplateId !== undefined) await assertTemplate(patch.certificateTemplateId);
+    if (patch.certificateTemplateId) await assertTemplateUsable(actor, patch.certificateTemplateId);
 
     if (patch.quota !== undefined) {
       const [{ n }] = await tx

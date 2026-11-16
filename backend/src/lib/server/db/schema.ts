@@ -59,6 +59,11 @@ export const certificateTemplates = mysqlTable(
     name: varchar("name", { length: 100 }).notNull(),
     version: int("version").notNull(),
     config: text("config").notNull(), // JSON pengaturan elemen (lihat certificates/config.ts)
+    // JSON desain bebas dari editor visual (certificates/layout.ts). Kosong = template tetap (pakai `config`).
+    layout: text("layout"),
+    // Kosong = template umum (dibuat admin). Terisi = hasil pengajuan penyelenggara; hanya pemiliknya
+    // (dan admin) yang bisa memilihnya untuk acara, dan tidak bisa dijadikan default.
+    ownerId: int("owner_id").references(() => users.id),
     isDefault: boolean("is_default").notNull().default(false),
     createdBy: int("created_by").references(() => users.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -233,6 +238,8 @@ export const notifications = mysqlTable(
       "event_updated",
       "organizer_verified",
       "organizer_rejected",
+      "template_approved",
+      "template_rejected",
     ]).notNull(),
     message: varchar("message", { length: 500 }).notNull(),
     isRead: boolean("is_read").notNull().default(false),
@@ -284,4 +291,74 @@ export const eventReviews = mysqlTable(
     uniqueIndex("review_event_user_unique").on(table.eventId, table.userId),
     index("review_event_idx").on(table.eventId),
   ],
+);
+
+/* ------------------------------------------------------------------ */
+/* CERTIFICATE ASSETS: logo, tanda tangan, gambar desain (PNG/JPEG).   */
+/* Berkasnya disimpan lewat lapisan storage (lokal / Google Drive).    */
+/* ------------------------------------------------------------------ */
+export const certificateAssets = mysqlTable(
+  "certificate_assets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerId: int("owner_id")
+      .notNull()
+      .references(() => users.id),
+    filename: varchar("filename", { length: 150 }).notNull(),
+    mime: varchar("mime", { length: 50 }).notNull(),
+    size: int("size").notNull(),
+    width: int("width").notNull(),
+    height: int("height").notNull(),
+    storageRef: varchar("storage_ref", { length: 500 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("assets_owner_idx").on(table.ownerId)],
+);
+
+/* ------------------------------------------------------------------ */
+/* TEMPLATE SUBMISSIONS: pengajuan desain dari penyelenggara.          */
+/* Dipisah dari certificate_templates supaya yang belum disetujui      */
+/* tidak pernah bisa terpilih oleh resolveTemplate().                  */
+/* ------------------------------------------------------------------ */
+export const certificateTemplateSubmissions = mysqlTable(
+  "certificate_template_submissions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    organizerId: int("organizer_id")
+      .notNull()
+      .references(() => users.id),
+    name: varchar("name", { length: 100 }).notNull(),
+    layoutJson: text("layout_json").notNull(),
+    status: mysqlEnum("status", ["draft", "pending", "approved", "rejected"]).notNull().default("draft"),
+    submittedAt: datetime("submitted_at", { mode: "date" }),
+    reviewedBy: int("reviewed_by").references(() => users.id),
+    reviewedAt: datetime("reviewed_at", { mode: "date" }),
+    reviewNote: varchar("review_note", { length: 500 }),
+    // versi template yang dibuat saat disetujui
+    approvedTemplateId: int("approved_template_id").references(() => certificateTemplates.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("submissions_organizer_idx").on(table.organizerId, table.status),
+    index("submissions_status_idx").on(table.status),
+  ],
+);
+
+/* Jejak audit keputusan (tidak pernah diubah/dihapus) */
+export const certificateTemplateAudit = mysqlTable(
+  "certificate_template_audit",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    submissionId: int("submission_id")
+      .notNull()
+      .references(() => certificateTemplateSubmissions.id),
+    actorId: int("actor_id")
+      .notNull()
+      .references(() => users.id),
+    action: mysqlEnum("action", ["submit", "approve", "reject"]).notNull(),
+    note: varchar("note", { length: 500 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("audit_submission_idx").on(table.submissionId)],
 );

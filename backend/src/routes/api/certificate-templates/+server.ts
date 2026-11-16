@@ -5,6 +5,6 @@ import type { RequestHandler } from "./$types";
 // Daftar template (id, name, version, isDefault) untuk dipilih penyelenggara saat membuat/mengedit acara
 export const GET: RequestHandler = ({ locals }) =>
   respond(async () => {
-    requireRole(locals, "penyelenggara", "admin");
-    return listTemplates();
+    const actor = requireRole(locals, "penyelenggara", "admin");
+    return listTemplates(actor);
   });

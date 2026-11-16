@@ -152,7 +152,7 @@ async function driveFetch(path: string, init: RequestInit = {}): Promise<Respons
 }
 
 const notFound = (kind: Kind) =>
-  new AppError(404, kind === "poster" ? "Poster tidak ditemukan" : "File sertifikat tidak ditemukan");
+  new AppError(404, kind === "poster" ? "Poster tidak ditemukan" : kind === "asset" ? "Gambar tidak ditemukan" : "File sertifikat tidak ditemukan");
 
 export const drive: Storage = {
   async put(_kind, name, bytes, mime) {
