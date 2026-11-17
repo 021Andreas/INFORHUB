@@ -3,6 +3,7 @@ import { db } from "$lib/server/db";
 import {
   certificateAssets,
   certificateTemplateAudit,
+  events,
   certificateTemplateSubmissions as submissions,
   notifications,
   users,
@@ -38,7 +39,7 @@ function assertOwn(actor: Actor, row: { organizerId: number } | undefined): asse
 
 export async function createSubmission(
   actor: Actor,
-  input: { name: string; layout: CertificateLayout; submit: boolean },
+  input: { name: string; layout: CertificateLayout; submit: boolean; eventId?: number },
 ) {
   const [{ n }] = await db
     .select({ n: count() })
@@ -47,6 +48,15 @@ export async function createSubmission(
   if (n >= MAX_OPEN_PER_ORGANIZER)
     throw new AppError(409, `Maksimal ${MAX_OPEN_PER_ORGANIZER} pengajuan aktif; hapus draft yang tidak terpakai`, "SUBMISSION_QUOTA");
 
+  if (input.submit && !input.eventId)
+    throw new AppError(400, "Pilih acara sebelum mengajukan template sertifikat", "EVENT_REQUIRED");
+  if (input.eventId) {
+    const [event] = await db.select().from(events).where(eq(events.id, input.eventId));
+    if (!event || event.organizerId !== actor.id)
+      throw new AppError(404, "Acara tidak ditemukan atau bukan milik Anda", "EVENT_NOT_FOUND");
+    if (event.status === "completed")
+      throw new AppError(409, "Acara sudah selesai; pengajuan template baru tidak dapat dilakukan", "EVENT_COMPLETED");
+  }
   await assertAssetsOwned(actor.id, extractAssetIds(input.layout));
   if (input.submit) assertSubmittable(input.layout);
   const json = serializeLayout(input.layout);
@@ -54,6 +64,7 @@ export async function createSubmission(
   return db.transaction(async (tx) => {
     const [res] = await tx.insert(submissions).values({
       organizerId: actor.id,
+      eventId: input.eventId ?? null,
       name: input.name,
       layoutJson: json,
       status: input.submit ? "pending" : "draft",
@@ -123,6 +134,7 @@ export async function listOwnSubmissions(actor: Actor, status?: SubmissionStatus
       reviewedAt: submissions.reviewedAt,
       reviewNote: submissions.reviewNote,
       approvedTemplateId: submissions.approvedTemplateId,
+      eventId: submissions.eventId,
       createdAt: submissions.createdAt,
       updatedAt: submissions.updatedAt,
     })
@@ -177,6 +189,7 @@ export async function listAdminSubmissions(status: SubmissionStatus | "all", opt
       reviewedAt: submissions.reviewedAt,
       reviewNote: submissions.reviewNote,
       approvedTemplateId: submissions.approvedTemplateId,
+      eventId: submissions.eventId,
       updatedAt: submissions.updatedAt,
     })
     .from(submissions)
@@ -197,9 +210,11 @@ export async function getAdminSubmission(id: number) {
       organizerName: users.name,
       organizerEmail: users.email,
       organizationName: users.organizationName,
+      eventTitle: events.title,
     })
     .from(submissions)
     .innerJoin(users, eq(users.id, submissions.organizerId))
+    .leftJoin(events, eq(events.id, submissions.eventId))
     .where(eq(submissions.id, id));
   if (!row) throw new AppError(404, "Pengajuan tidak ditemukan");
 
@@ -223,6 +238,7 @@ export async function getAdminSubmission(id: number) {
     organizerName: row.organizerName,
     organizerEmail: row.organizerEmail,
     organizationName: row.organizationName,
+    eventTitle: row.eventTitle,
     layout: rawLayout(layoutJson),
     audit,
   };
@@ -263,6 +279,17 @@ export async function approveSubmission(actor: Actor, id: number, note?: string)
       ownerId: row.organizerId,
       createdBy: actor.id,
     });
+    // Jika pengajuan dibuat untuk acara tertentu, hubungkan template yang disetujui
+    // dan aktifkan penerbitan dalam transaksi yang sama.
+    if (row.eventId) {
+      const [event] = await tx.select().from(events).where(eq(events.id, row.eventId)).for("update");
+      if (!event || event.organizerId !== row.organizerId)
+        throw new AppError(409, "Acara tujuan pengajuan tidak ditemukan atau kepemilikannya berubah", "EVENT_NOT_FOUND");
+      if (event.certificateTemplateId && event.certificateTemplateId !== tpl.id)
+        throw new AppError(409, "Acara sudah memiliki template sertifikat. Lepaskan template lama terlebih dahulu.", "EVENT_TEMPLATE_EXISTS");
+      await tx.update(events).set({ certificateTemplateId: tpl.id, certificateAvailable: true }).where(eq(events.id, row.eventId));
+    }
+
     const cleanNote = note?.trim() || null;
     await tx
       .update(submissions)
@@ -272,9 +299,37 @@ export async function approveSubmission(actor: Actor, id: number, note?: string)
     await tx.insert(notifications).values({
       userId: row.organizerId,
       type: "template_approved",
-      message: `Template "${row.name}" disetujui (versi ${tpl.version}) dan siap dipilih untuk acara Anda.`.slice(0, 500),
+      eventId: row.eventId ?? null,
+      message: `Template "${row.name}" disetujui (versi ${tpl.version})${row.eventId ? " dan otomatis diaktifkan untuk acara terkait" : " dan siap dipilih untuk acara Anda"}.`.slice(0, 500),
     });
     return { ok: true, status: "approved" as const, templateId: tpl.id, version: tpl.version };
+  });
+}
+
+
+/** Hubungkan pengajuan yang sudah disetujui ke acara. Berguna untuk pengajuan lama
+ * yang dibuat sebelum event_id disimpan. Satu acara hanya boleh memakai satu template. */
+export async function activateApprovedSubmission(actor: Actor, submissionId: number, eventId: number) {
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select().from(submissions).where(eq(submissions.id, submissionId)).for("update");
+    assertOwn(actor, row);
+    if (row.status !== "approved" || !row.approvedTemplateId)
+      throw new AppError(409, "Template belum disetujui admin", "TEMPLATE_NOT_APPROVED");
+
+    const [event] = await tx.select().from(events).where(eq(events.id, eventId)).for("update");
+    if (!event || event.organizerId !== actor.id)
+      throw new AppError(404, "Acara tidak ditemukan atau bukan milik Anda", "EVENT_NOT_FOUND");
+    if (event.status === "completed")
+      throw new AppError(409, "Acara sudah selesai dan pengaturan sertifikat terkunci", "EVENT_COMPLETED");
+    if (event.certificateTemplateId && event.certificateTemplateId !== row.approvedTemplateId)
+      throw new AppError(409, "Acara sudah menggunakan template sertifikat lain", "EVENT_TEMPLATE_EXISTS");
+
+    await tx.update(events).set({
+      certificateTemplateId: row.approvedTemplateId,
+      certificateAvailable: true,
+    }).where(eq(events.id, eventId));
+    await tx.update(submissions).set({ eventId }).where(eq(submissions.id, submissionId));
+    return { ok: true, eventId, templateId: row.approvedTemplateId, certificateAvailable: true };
   });
 }
 

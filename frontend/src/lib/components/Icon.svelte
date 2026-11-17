@@ -25,7 +25,16 @@
     plus: ['M12 5v14','M5 12h14'],
     bookmark: ['M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z'],
     share: ['M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7','m16 6-4-4-4 4','M12 2v13'],
-    file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z','M14 2v6h6','M8 13h8','M8 17h8']
+    file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z','M14 2v6h6','M8 13h8','M8 17h8'],
+    type: ['M4 7V4h16v3','M12 4v16','M8 20h8'],
+    braces: ['M8 4H6a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h2','M16 4h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-2'],
+    shapes: ['M4 4h7v7H4z','M14 4h6v6h-6z','M14 14h6v6h-6z','M4 14h7v7H4z'],
+    image: ['M4 4h16v16H4z','m4 16 5-5 4 4 3-3 4 4','M9 9h.01'],
+    grid: ['M3 3h8v8H3z','M13 3h8v8h-8z','M3 13h8v8H3z','M13 13h8v8h-8z'],
+    trash: ['M3 6h18','M8 6V4h8v2','m19 6-1 14H6L5 6','M10 11v5','M14 11v5'],
+    'arrow-up': ['M12 19V5','m5 12 7-7 7 7'],
+    copy: ['M8 8h12v13H8z','M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3'],
+    'mouse-pointer-2': ['m5 3 14 10-7 1-3 7z']
   };
 </script>
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

@@ -327,6 +327,8 @@ export const certificateTemplateSubmissions = mysqlTable(
     organizerId: int("organizer_id")
       .notNull()
       .references(() => users.id),
+    // Acara tujuan template. NULL hanya untuk pengajuan lama/draft umum.
+    eventId: int("event_id").references(() => events.id, { onDelete: "set null" }),
     name: varchar("name", { length: 100 }).notNull(),
     layoutJson: text("layout_json").notNull(),
     status: mysqlEnum("status", ["draft", "pending", "approved", "rejected"]).notNull().default("draft"),
@@ -341,6 +343,7 @@ export const certificateTemplateSubmissions = mysqlTable(
   },
   (table) => [
     index("submissions_organizer_idx").on(table.organizerId, table.status),
+    index("submissions_event_idx").on(table.eventId),
     index("submissions_status_idx").on(table.status),
   ],
 );

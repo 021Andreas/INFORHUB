@@ -26,8 +26,9 @@
   // Admin melihat semua acara; penyelenggara hanya acara miliknya (semua status).
   onMount(async () => {
     try {
-      const me = await api<{user:{role:'admin'|'penyelenggara'}}>('/api/auth/me');
-      role = me.user.role;
+      const me = await api<{user:{role:string}}>('/api/auth/me');
+      const normalizedRole = String(me.user.role ?? '').toLowerCase();
+      role = normalizedRole === 'admin' ? 'admin' : 'penyelenggara';
       events = await api<EventItem[]>('/api/admin/events?status=all');
     } catch (e) {
       actionError = e instanceof Error ? e.message : 'Gagal memuat acara.';
@@ -75,6 +76,29 @@
       events = events.map(item => item.id === event.id ? { ...item, status } : item);
     } catch (e) {
       actionError = e instanceof Error ? e.message : 'Status acara gagal diperbarui.';
+    } finally {
+      actionBusy = null;
+    }
+  }
+
+  async function completeEvent(event: EventItem) {
+    const confirmed = confirm(
+      `Selesaikan acara "${event.title}"?\n\nSetelah diselesaikan, status acara menjadi Selesai. Proses absensi dianggap berakhir dan acara dapat masuk ke tahap pengecekan serta penerbitan sertifikat.`
+    );
+    if (!confirmed) return;
+
+    actionBusy = event.id;
+    actionError = '';
+    try {
+      await api(`/api/events/${event.id}/status`, {
+        method: 'POST',
+        body: { status: 'completed' }
+      });
+      events = events.map((item) =>
+        item.id === event.id ? { ...item, status: 'completed' } : item
+      );
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : 'Acara gagal diselesaikan.';
     } finally {
       actionBusy = null;
     }
@@ -201,7 +225,20 @@
                       <span class="muted-action">Tidak perlu tindakan</span>
                     {/if}
                   {:else}
-                    <button class="edit-button" onclick={() => editEvent(event.id)}>Edit</button>
+                    <div class="organizer-actions">
+                      <button class="edit-button" onclick={() => editEvent(event.id)} disabled={actionBusy === event.id}>Edit</button>
+                      {#if event.status === 'published'}
+                        <button
+                          class="complete-button"
+                          onclick={() => completeEvent(event)}
+                          disabled={actionBusy === event.id}
+                        >
+                          {actionBusy === event.id ? 'Memproses...' : 'Selesaikan Acara'}
+                        </button>
+                      {:else if event.status === 'completed'}
+                        <span class="completed-label">Acara selesai</span>
+                      {/if}
+                    </div>
                   {/if}
                 </td>
               </tr>
@@ -267,6 +304,10 @@
   .status.pending { background: var(--surface-3); color: var(--accent-text)}
   .status.completed { background: var(--surface-3); color: var(--accent-text)}
   .edit-button { padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface-3); color: var(--accent-text); font-size: 10px}
+  .organizer-actions { display:flex; align-items:center; gap:7px; }
+  .complete-button { padding:7px 10px; border:1px solid var(--ok-text); border-radius:6px; background:var(--ok-bg); color:var(--ok-text); font-size:10px; font-weight:650; }
+  .complete-button:disabled,.edit-button:disabled { opacity:.55; cursor:wait; }
+  .completed-label { color:var(--ok-text); font-size:10px; font-weight:650; }
   .empty { display: flex; min-height: 300px; align-items: center; justify-content: center; flex-direction: column; padding: 30px; text-align: center}
   .empty-icon { margin-bottom: 12px; color: var(--muted); font-size: 40px}
   .empty h3 { margin: 0 0 7px; font-size: 15px}

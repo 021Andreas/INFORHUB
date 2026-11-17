@@ -20,9 +20,9 @@
   let profileOpen = $state(false);
 
   const path = $derived(page.url.pathname);
-  const isAdmin = $derived(path.startsWith('/admin') || path.startsWith('/penyelenggara'));
+  const isAdmin = $derived(path.startsWith('/admin'));
   const isAuth = $derived(path === '/login' || path === '/register');
-  const publicPage = $derived(!isAdmin && !isAuth);
+  const publicPage = $derived(!isAdmin && !isAuth && !path.startsWith('/penyelenggara'));
 
   const userInitial = $derived((user?.name ?? 'P').trim().charAt(0).toUpperCase());
   const managementHref = $derived(user?.role === 'admin' ? '/admin' : '/penyelenggara');
@@ -244,6 +244,15 @@
         >
           <Icon name="certificate" />
           <span>Sertifikat</span>
+        </a>
+
+        <a
+          class:active={path.startsWith('/verifikasi')}
+          href="/verifikasi"
+          onclick={closeMenus}
+        >
+          <Icon name="shield-check" />
+          <span>Verifikasi Sertifikat</span>
         </a>
 
         <div class="sidebar-separator"></div>
@@ -580,15 +589,21 @@
   }
 
   .public-body {
-    display: grid;
-    grid-template-columns: 248px minmax(0, 1fr);
+    display: block;
     min-height: calc(100vh - 130px);
   }
 
   .public-sidebar {
-    position: sticky;
+    position: fixed;
     top: 82px;
-    height: calc(100vh - 82px);
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    width: 265px;
+    height: auto;
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    box-shadow: 18px 0 50px #0005;
     display: flex;
     flex-direction: column;
     gap: 7px;
@@ -668,6 +683,10 @@
     line-height: 1.6;
   }
 
+  .public-sidebar.open {
+    transform: translateX(0);
+  }
+
   .public-content {
     min-width: 0;
     width: 100%;
@@ -690,9 +709,26 @@
     z-index: 60;
   }
 
-  .mobile-menu,
+  .mobile-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-2);
+    cursor: pointer;
+  }
+
   .mobile-overlay {
-    display: none;
+    display: block;
+    position: fixed;
+    inset: 82px 0 0;
+    z-index: 45;
+    border: 0;
+    background: #10233d66;
   }
 
   .icon-button {
@@ -711,9 +747,6 @@
       width: 190px;
     }
 
-    .public-body {
-      grid-template-columns: 220px minmax(0, 1fr);
-    }
   }
 
   @media (max-width: 720px) {
@@ -761,34 +794,15 @@
     }
 
     .public-body {
-      display: block;
       min-height: calc(100vh - 118px);
     }
 
     .public-sidebar {
-      position: fixed;
       top: 70px;
-      bottom: 0;
-      left: 0;
-      z-index: 50;
-      width: 265px;
-      height: auto;
-      transform: translateX(-105%);
-      transition: transform 0.2s ease;
-      box-shadow: 18px 0 50px #0005;
-    }
-
-    .public-sidebar.open {
-      transform: translateX(0);
     }
 
     .mobile-overlay {
-      display: block;
-      position: fixed;
       inset: 70px 0 0;
-      z-index: 45;
-      background: #10233d66;
-      border: 0;
     }
 
     .public-content {

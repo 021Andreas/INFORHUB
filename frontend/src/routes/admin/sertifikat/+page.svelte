@@ -37,7 +37,7 @@
   <div class="breadcrumb">Penyelenggara / Sertifikat</div>
   <h1>Sertifikat dan Penerbitan</h1>
   <p class="subtitle">Pantau sertifikat yang telah diterbitkan untuk peserta acara yang dikelola.</p>
-  <div class="issue-note"><strong>F-16 dan F-24 · Penerbitan otomatis dan massal</strong><p>Halaman ini saat ini menampilkan catatan sertifikat yang sudah terbit. Form pemilihan peserta, pemeriksaan kelayakan kehadiran, dan aksi penerbitan massal memerlukan endpoint backend yang belum tersedia pada kode frontend ini.</p></div>
+  <div class="issue-note"><strong>Penerbitan sertifikat</strong><p>Backend menyediakan penerbitan sertifikat untuk peserta yang hadir setelah acara selesai. Antarmuka aksi penerbitan dan pemrosesan massal perlu dihubungkan ke layanan tersebut.</p></div>
 
   <div class="summary">
     <div><span>Total sertifikat</span><strong>{rows.length}</strong></div>
