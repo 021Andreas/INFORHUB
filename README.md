@@ -282,3 +282,12 @@ Dalam INFORHUB, sistem perlu memeriksa role pengguna pada setiap permintaan yang
 Dengan pembagian role yang jelas, INFORHUB diharapkan dapat mengurangi risiko akses tidak sah, menjaga kerahasiaan data peserta, serta mendukung pengelolaan kegiatan dan sertifikat digital secara lebih aman dan terstruktur.
 
 </div>
+
+
+<div align="center">
+
+# BAB III
+
+# PERANCANGAN SISTEM
+
+</div>
