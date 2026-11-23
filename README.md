@@ -283,11 +283,5 @@ Dengan pembagian role yang jelas, INFORHUB diharapkan dapat mengurangi risiko ak
 
 </div>
 
-
-<div align="center">
-
-# BAB III
-
-# PERANCANGAN SISTEM
-
-</div>
+# <div align="center">BAB III</div>
+## <div align="center">PERANCANGAN SISTEM</div>
