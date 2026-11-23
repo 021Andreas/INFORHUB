@@ -204,3 +204,81 @@ Pembatasan hak akses diperlukan untuk mencegah pengguna melihat atau mengubah da
 Dengan menerapkan prinsip keamanan dan pembagian hak akses tersebut, INFORHUB diharapkan dapat mendukung pengelolaan kegiatan kampus mulai dari publikasi, pendaftaran, validasi kehadiran, hingga distribusi dan verifikasi sertifikat digital. Meskipun demikian, kualitas layanan tetap bergantung pada ketepatan data yang dimasukkan, validitas pencatatan kehadiran, kejelasan ketentuan penerbitan sertifikat, dan kedisiplinan penyelenggara dalam memperbarui informasi. Oleh karena itu, rancangan sistem perlu disertai aturan operasional yang disepakati oleh pihak terkait agar pengelolaan kegiatan dan sertifikat berjalan secara terstruktur.
 
 </div>
+
+## **2.5 Analisis Pembagian Role dan Hak Akses Pengguna**
+
+<div align="justify">
+
+Pembagian role atau peran pengguna merupakan bagian penting dalam perancangan sistem INFORHUB. Pembagian ini bertujuan untuk memastikan bahwa setiap pengguna hanya dapat mengakses fitur dan data sesuai dengan tugas serta kewenangannya. Sistem INFORHUB memiliki tiga role utama, yaitu Mahasiswa, Penyelenggara, dan Administrator. Setiap role memiliki tanggung jawab dan hak akses yang berbeda sesuai dengan kebutuhan pengelolaan kegiatan kampus.
+
+</div>
+
+### **1) Role Mahasiswa**
+
+<div align="justify">
+
+Mahasiswa merupakan pengguna yang memanfaatkan INFORHUB untuk memperoleh informasi kegiatan kampus dan mengikuti kegiatan yang tersedia. Mahasiswa dapat melihat daftar dan detail acara, melakukan pencarian kegiatan, mendaftarkan diri, melihat status serta riwayat pendaftaran, dan mengakses sertifikat digital miliknya apabila telah memenuhi persyaratan kegiatan.
+
+Hak akses mahasiswa dibatasi pada data yang berkaitan dengan akun dan keikutsertaannya sendiri. Mahasiswa tidak memiliki kewenangan untuk mengubah informasi kegiatan milik penyelenggara, mengelola akun pengguna lain, atau menerbitkan sertifikat. Pembatasan tersebut bertujuan untuk menjaga kerahasiaan data peserta dan mencegah perubahan informasi oleh pihak yang tidak berwenang.
+
+</div>
+
+### **2) Role Penyelenggara**
+
+<div align="justify">
+
+Penyelenggara merupakan pengguna yang bertanggung jawab dalam pengelolaan kegiatan kampus. Melalui INFORHUB, penyelenggara dapat membuat dan memperbarui informasi kegiatan, mengatur kuota peserta, melihat data pendaftar, memvalidasi kehadiran, serta mengunggah atau menerbitkan sertifikat bagi peserta yang memenuhi ketentuan.
+
+Hak akses penyelenggara dibatasi pada kegiatan yang menjadi tanggung jawabnya. Penyelenggara tidak seharusnya dapat mengubah kegiatan milik penyelenggara lain tanpa kewenangan yang sesuai atau mengelola role seluruh pengguna. Pembatasan ini diperlukan agar pengelolaan kegiatan berjalan secara teratur dan data peserta tetap terlindungi.
+
+</div>
+
+### **3) Role Administrator**
+
+<div align="justify">
+
+Administrator merupakan pengguna yang bertanggung jawab dalam pengelolaan akun, pengaturan hak akses, moderasi kegiatan, serta pengelolaan template sertifikat dan pengaturan sistem sesuai kewenangannya. Administrator berperan menjaga agar penggunaan platform berjalan sesuai aturan yang telah ditetapkan.
+
+Hak akses administrator mencakup pengelolaan akun dan role pengguna serta pemeriksaan kegiatan yang diajukan. Meskipun memiliki kewenangan yang lebih luas, setiap tindakan administrator tetap perlu mengikuti prosedur keamanan dan dapat dicatat untuk mendukung pemantauan aktivitas sistem. Pengelolaan hak akses juga perlu dilakukan secara hati-hati agar tidak terjadi perubahan data yang tidak sesuai dengan kebutuhan operasional.
+
+</div>
+
+### **4) Perbandingan Hak Akses Ketiga Role**
+
+<div align="justify">
+
+Perbedaan hak akses ketiga role pada sistem INFORHUB dapat dirangkum dalam tabel berikut.
+
+</div>
+
+| Fitur atau Kewenangan | Mahasiswa | Penyelenggara | Administrator |
+|---|---|---|---|
+| Melihat daftar dan detail acara | Ya | Ya | Ya |
+| Mendaftar kegiatan | Ya | Tidak sebagai fungsi utama role | Tidak sebagai fungsi utama role |
+| Melihat riwayat pendaftaran pribadi | Ya | Tidak sebagai fungsi utama role | Tidak sebagai fungsi utama role |
+| Membuat dan mengedit acara | Tidak | Ya, untuk acara yang dikelola | Sesuai kewenangan moderasi |
+| Mengelola kuota dan data pendaftaran | Tidak | Ya, untuk acara yang dikelola | Sesuai kewenangan sistem |
+| Memvalidasi kehadiran peserta | Tidak | Ya | Tidak sebagai fungsi utama role |
+| Menerbitkan sertifikat | Tidak | Ya, sesuai ketentuan | Mengelola template sertifikat |
+| Mengunduh sertifikat milik sendiri | Ya | Jika juga memenuhi ketentuan sebagai peserta | Jika juga memenuhi ketentuan sebagai peserta |
+| Mengelola akun dan role pengguna | Tidak | Tidak | Ya |
+| Memoderasi kegiatan | Tidak | Tidak | Ya |
+| Mengelola template sertifikat | Tidak | Menggunakan template yang tersedia | Ya |
+
+<div align="justify">
+
+**Keterangan:** Tabel tersebut merupakan rancangan pembagian hak akses berdasarkan kebutuhan fitur INFORHUB. Implementasi akhir perlu disesuaikan dengan aturan sistem dan fitur yang benar-benar dikembangkan.
+
+</div>
+
+### **5) Penerapan Autentikasi dan Otorisasi**
+
+<div align="justify">
+
+Penerapan pembagian role perlu didukung oleh autentikasi dan otorisasi. Autentikasi digunakan untuk memeriksa identitas pengguna ketika masuk ke sistem, sedangkan otorisasi digunakan untuk menentukan fitur dan data yang boleh diakses oleh pengguna setelah berhasil masuk.
+
+Dalam INFORHUB, sistem perlu memeriksa role pengguna pada setiap permintaan yang membutuhkan hak akses tertentu. Sebagai contoh, mahasiswa tidak boleh mengubah data acara melalui permintaan langsung ke layanan backend, dan penyelenggara tidak boleh mengakses atau mengubah data kegiatan milik penyelenggara lain tanpa izin. Pemeriksaan hak akses harus diterapkan pada sisi backend, bukan hanya dengan menyembunyikan menu pada antarmuka aplikasi.
+
+Dengan pembagian role yang jelas, INFORHUB diharapkan dapat mengurangi risiko akses tidak sah, menjaga kerahasiaan data peserta, serta mendukung pengelolaan kegiatan dan sertifikat digital secara lebih aman dan terstruktur.
+
+</div>
