@@ -124,3 +124,27 @@ AKSIKAMPUS menerapkan konsep sistem informasi dengan menempatkan data kegiatan, 
 Pengelolaan informasi secara terpusat dapat mengurangi kebutuhan mencari pengumuman dari banyak kanal, tetapi keberhasilannya bergantung pada kelengkapan dan ketepatan data yang dimasukkan. Oleh sebab itu, setiap acara perlu memiliki atribut yang jelas, seperti judul, deskripsi, penyelenggara, jadwal, tempat atau tautan daring, kuota, syarat peserta, status publikasi, dan keterangan sertifikat. Sistem juga perlu menyediakan mekanisme pembaruan agar informasi yang berubah tidak terus ditampilkan sebagai informasi lama.
 
 </div>
+
+## **2.2 Aplikasi Berbasis Web dan Mobile**
+
+<div align="justify">
+
+Aplikasi berbasis web adalah aplikasi yang diakses melalui peramban dan umumnya dapat digunakan pada berbagai perangkat tanpa pengguna memasang aplikasi khusus. Pendekatan web sesuai untuk pengelolaan kegiatan karena penyelenggara dapat membuat dan memperbarui acara melalui antarmuka administrasi, sedangkan mahasiswa dapat membuka katalog acara melalui tautan. Aplikasi web juga memudahkan pemeliharaan karena pembaruan sistem dapat diterapkan pada sisi layanan tanpa mengharuskan seluruh pengguna memasang versi baru.
+
+Aplikasi mobile dirancang untuk digunakan melalui perangkat bergerak, seperti telepon pintar. Dalam layanan kegiatan kampus, antarmuka mobile dapat memudahkan mahasiswa memeriksa jadwal, mencari acara, melakukan pendaftaran, melihat status, menerima notifikasi, dan membuka sertifikat saat dibutuhkan. Pengalaman mobile perlu mempertimbangkan ukuran layar, kemudahan navigasi, kecepatan akses, keterbacaan informasi, serta kondisi jaringan yang berbeda-beda.
+
+AKSIKAMPUS dapat dikembangkan dengan layanan backend dan basis data bersama agar informasi yang diakses melalui web dan mobile tetap konsisten. Perancangan lintas platform perlu memperhatikan pembagian hak akses, validasi masukan, keamanan autentikasi, dan penanganan kesalahan. Fitur yang sama tidak harus memiliki tampilan identik di kedua platform, tetapi proses inti dan aturan bisnisnya perlu konsisten. Misalnya, kuota acara tidak boleh terlampaui hanya karena pendaftaran dilakukan melalui perangkat yang berbeda.
+
+</div>
+
+## **2.3 Manajemen Event dan Registrasi Digital**
+
+<div align="justify">
+
+Manajemen event adalah proses merencanakan, memublikasikan, melaksanakan, dan mengevaluasi suatu kegiatan. Dalam lingkungan kampus, kegiatan dapat diselenggarakan oleh unit universitas, fakultas, program studi, dosen, maupun organisasi mahasiswa. Setiap kegiatan memiliki kebutuhan yang dapat berbeda, tetapi umumnya membutuhkan informasi acara, sasaran peserta, jadwal, lokasi, kuota, mekanisme pendaftaran, dan ketentuan keikutsertaan.
+
+Registrasi digital merupakan proses pencatatan calon peserta melalui sistem elektronik. Data pendaftaran yang terstruktur memungkinkan penyelenggara mengetahui jumlah pendaftar, memeriksa kelayakan peserta, mengelola daftar tunggu jika diperlukan, dan menyusun rekap kegiatan. Sistem sebaiknya memvalidasi data wajib, mencegah pendaftaran ganda untuk acara yang sama, serta mengubah status pendaftaran secara jelas, misalnya terdaftar, menunggu persetujuan, dibatalkan, atau selesai mengikuti acara.
+
+Dalam AKSIKAMPUS, alur manajemen acara dimulai dari penyelenggara membuat draf acara, melengkapi informasi, lalu mengajukan publikasi sesuai kebijakan yang berlaku. Setelah acara dipublikasikan, mahasiswa dapat melihat detail dan mendaftar selama pendaftaran dibuka serta kuota tersedia. Penyelenggara dapat memantau pendaftar dan mencatat kehadiran. Jika jadwal atau ketentuan berubah, pembaruan perlu disampaikan melalui halaman acara dan, apabila tersedia, notifikasi kepada pengguna yang terdaftar. Aturan yang jelas membantu mengurangi kebingungan peserta maupun beban administrasi.
+
+</div>
