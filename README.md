@@ -301,3 +301,15 @@ Dengan pembagian role yang jelas, INFORHUB diharapkan dapat mengurangi risiko ak
 | US-06 | Sebagai mahasiswa, saya ingin melihat status dan riwayat pendaftaran sehingga dapat mengetahui kegiatan yang pernah saya ikuti. | Should | 3 SP | Sistem menampilkan status dan riwayat pendaftaran. |
 | US-07 | Sebagai mahasiswa, saya ingin mengunduh sertifikat digital sehingga memiliki bukti keikutsertaan kegiatan. | Must | 5 SP | Sertifikat dapat diunduh oleh peserta yang memenuhi persyaratan. |
 | US-08 | Sebagai mahasiswa, saya ingin memverifikasi sertifikat melalui QR Code sehingga dapat memastikan keaslian sertifikat. | Must | 5 SP | QR Code mengarah ke halaman verifikasi dan menampilkan status sertifikat. |
+
+
+### Role Penyelenggara
+
+| ID | Sebagai … saya ingin … sehingga … | Prioritas | Estimasi | Acceptance Criteria |
+|---|---|---|---|---|
+| US-09 | Sebagai penyelenggara, saya ingin membuat dan mengelola kegiatan sehingga mahasiswa dapat mengetahui informasi kegiatan. | MUST | 5 SP | Penyelenggara dapat menambah, mengubah, dan mengelola kegiatan. |
+| US-10 | Sebagai penyelenggara, saya ingin mengatur jadwal, lokasi, kuota, dan persyaratan sehingga kegiatan memiliki informasi yang jelas. | MUST | 3 SP | Data kegiatan dapat disimpan dan diperbarui. |
+| US-11 | Sebagai penyelenggara, saya ingin melihat daftar peserta sehingga dapat memantau mahasiswa yang mendaftar. | MUST | 3 SP | Sistem menampilkan daftar peserta setiap kegiatan. |
+| US-12 | Sebagai penyelenggara, saya ingin mencatat kehadiran peserta sehingga mengetahui peserta yang mengikuti kegiatan. | MUST | 5 SP | Kehadiran peserta dapat dicatat dan diperiksa. |
+| US-13 | Sebagai penyelenggara, saya ingin menerbitkan sertifikat berdasarkan template resmi sehingga peserta yang memenuhi persyaratan memperoleh sertifikat. | MUST | 5 SP | Sertifikat diterbitkan dengan identitas dan nomor unik serta QR Code. |
+| US-14 | Sebagai penyelenggara, saya ingin melihat laporan peserta dan kehadiran sehingga dapat mengevaluasi kegiatan. | SHOULD | 3 SP | Sistem menampilkan laporan peserta dan kehadiran. |
