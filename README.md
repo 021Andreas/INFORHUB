@@ -113,3 +113,30 @@ Solusi digital yang diusulkan adalah **AKSIKAMPUS**, yaitu aplikasi berbasis web
 # <div align="center">BAB II</div>
 ## <div align="center">LANDASAN TEORI</div>
 
+## 2.1 Sistem Informasi
+
+<p align="justify">
+Sistem informasi merupakan susunan komponen yang saling berhubungan untuk mengumpulkan, mengolah, menyimpan, dan menyajikan informasi guna mendukung kegiatan operasional maupun pengambilan keputusan. Komponen tersebut dapat mencakup manusia, prosedur, data, perangkat lunak, dan infrastruktur teknologi. Dalam konteks perguruan tinggi, sistem informasi dapat membantu mengelola informasi akademik maupun kegiatan pendukung yang melibatkan mahasiswa, dosen, unit fakultas, dan organisasi kampus.
+</p>
+
+<p align="justify">
+AKSIKAMPUS menerapkan konsep sistem informasi dengan menempatkan data kegiatan, penyelenggara, pendaftaran, kehadiran, dan sertifikat dalam alur yang saling terhubung. Data acara yang dimasukkan penyelenggara ditampilkan kepada mahasiswa setelah melalui proses publikasi atau verifikasi sesuai aturan aplikasi. Ketika mahasiswa mendaftar, sistem menyimpan hubungan antara akun dan acara sehingga status pendaftaran serta riwayat keikutsertaan dapat ditampilkan kembali. Apabila peserta memenuhi syarat sertifikat, data tersebut menjadi dasar untuk memberikan akses terhadap sertifikat digital.
+</p>
+
+<p align="justify">
+Pengelolaan informasi secara terpusat dapat mengurangi kebutuhan mencari pengumuman dari banyak kanal, tetapi keberhasilannya bergantung pada kelengkapan dan ketepatan data yang dimasukkan. Oleh sebab itu, setiap acara perlu memiliki atribut yang jelas, seperti judul, deskripsi, penyelenggara, jadwal, tempat atau tautan daring, kuota, syarat peserta, status publikasi, dan keterangan sertifikat. Sistem juga perlu menyediakan mekanisme pembaruan agar informasi yang berubah tidak terus ditampilkan sebagai informasi lama.
+</p>
+
+## 2.2 Aplikasi Berbasis Web dan Mobile
+
+<p align="justify">
+Aplikasi berbasis web adalah aplikasi yang diakses melalui peramban dan umumnya dapat digunakan pada berbagai perangkat tanpa pengguna memasang aplikasi khusus. Pendekatan web sesuai untuk pengelolaan kegiatan karena penyelenggara dapat membuat dan memperbarui acara melalui antarmuka administrasi, sedangkan mahasiswa dapat membuka katalog acara melalui tautan. Aplikasi web juga memudahkan pemeliharaan karena pembaruan sistem dapat diterapkan pada sisi layanan tanpa mengharuskan seluruh pengguna memasang versi baru.
+</p>
+
+<p align="justify">
+Aplikasi mobile dirancang untuk digunakan melalui perangkat bergerak, seperti telepon pintar. Dalam layanan kegiatan kampus, antarmuka mobile dapat memudahkan mahasiswa memeriksa jadwal, mencari acara, melakukan pendaftaran, melihat status, menerima notifikasi, dan membuka sertifikat saat dibutuhkan. Pengalaman mobile perlu mempertimbangkan ukuran layar, kemudahan navigasi, kecepatan akses, keterbacaan informasi, serta kondisi jaringan yang berbeda-beda.
+</p>
+
+<p align="justify">
+AKSIKAMPUS dapat dikembangkan dengan layanan backend dan basis data bersama agar informasi yang diakses melalui web dan mobile tetap konsisten. Perancangan lintas platform perlu memperhatikan pembagian hak akses, validasi masukan, keamanan autentikasi, dan penanganan kesalahan. Fitur yang sama tidak harus memiliki tampilan identik di kedua platform, tetapi proses inti dan aturan bisnisnya perlu konsisten. Misalnya, kuota acara tidak boleh terlampaui hanya karena pendaftaran dilakukan melalui perangkat yang berbeda.
+</p>
