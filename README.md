@@ -285,3 +285,19 @@ Dengan pembagian role yang jelas, INFORHUB diharapkan dapat mengurangi risiko ak
 
 # <div align="center">BAB III</div>
 ## <div align="center">PERANCANGAN SISTEM</div>
+
+
+## 3.1 User Story
+
+### Role Mahasiswa
+
+| ID | Sebagai … saya ingin … sehingga … | Prioritas | Estimasi | Acceptance Criteria |
+|---|---|---|---|---|
+| US-01 | Sebagai mahasiswa, saya ingin melakukan registrasi dan login sehingga dapat mengakses aplikasi. | Must | 3 SP | Pengguna dapat membuat akun dan login menggunakan data yang valid. |
+| US-02 | Sebagai mahasiswa, saya ingin melengkapi profil menggunakan NIM sehingga identitas saya dapat dibedakan. | Must | 3 SP | Profil menyimpan NIM unik dan data mahasiswa. |
+| US-03 | Sebagai mahasiswa, saya ingin melihat daftar kegiatan sehingga dapat mengetahui kegiatan yang tersedia. | Must | 3 SP | Sistem menampilkan daftar kegiatan yang tersedia. |
+| US-04 | Sebagai mahasiswa, saya ingin melihat detail kegiatan sehingga mengetahui jadwal, lokasi, kuota, dan persyaratan. | Must | 2 SP | Detail kegiatan ditampilkan secara lengkap. |
+| US-05 | Sebagai mahasiswa, saya ingin mendaftar kegiatan sehingga dapat mengikuti kegiatan yang dipilih. | Must | 5 SP | Pendaftaran berhasil jika kuota dan persyaratan terpenuhi. |
+| US-06 | Sebagai mahasiswa, saya ingin melihat status dan riwayat pendaftaran sehingga dapat mengetahui kegiatan yang pernah saya ikuti. | Should | 3 SP | Sistem menampilkan status dan riwayat pendaftaran. |
+| US-07 | Sebagai mahasiswa, saya ingin mengunduh sertifikat digital sehingga memiliki bukti keikutsertaan kegiatan. | Must | 5 SP | Sertifikat dapat diunduh oleh peserta yang memenuhi persyaratan. |
+| US-08 | Sebagai mahasiswa, saya ingin memverifikasi sertifikat melalui QR Code sehingga dapat memastikan keaslian sertifikat. | Must | 5 SP | QR Code mengarah ke halaman verifikasi dan menampilkan status sertifikat. |
