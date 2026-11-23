@@ -313,3 +313,15 @@ Dengan pembagian role yang jelas, INFORHUB diharapkan dapat mengurangi risiko ak
 | US-12 | Sebagai penyelenggara, saya ingin mencatat kehadiran peserta sehingga mengetahui peserta yang mengikuti kegiatan. | MUST | 5 SP | Kehadiran peserta dapat dicatat dan diperiksa. |
 | US-13 | Sebagai penyelenggara, saya ingin menerbitkan sertifikat berdasarkan template resmi sehingga peserta yang memenuhi persyaratan memperoleh sertifikat. | MUST | 5 SP | Sertifikat diterbitkan dengan identitas dan nomor unik serta QR Code. |
 | US-14 | Sebagai penyelenggara, saya ingin melihat laporan peserta dan kehadiran sehingga dapat mengevaluasi kegiatan. | SHOULD | 3 SP | Sistem menampilkan laporan peserta dan kehadiran. |
+
+
+### Role Administrator
+
+| ID | Sebagai … saya ingin … sehingga … | Prioritas | Estimasi | Acceptance Criteria |
+|---|---|---|---|---|
+| US-15 | Sebagai administrator, saya ingin mengelola akun pengguna sehingga data pengguna tetap teratur. | MUST | 3 SP | Administrator dapat melihat dan mengelola akun pengguna. |
+| US-16 | Sebagai administrator, saya ingin mengatur hak akses berdasarkan role sehingga pengguna mengakses fitur sesuai kewenangannya. | MUST | 3 SP | Hak akses dibedakan menjadi Mahasiswa, Penyelenggara, dan Administrator. |
+| US-17 | Sebagai administrator, saya ingin memverifikasi akun penyelenggara sehingga kegiatan dikelola oleh pihak yang berwenang. | SHOULD | 3 SP | Administrator dapat menyetujui atau menolak akun penyelenggara. |
+| US-18 | Sebagai administrator, saya ingin mengelola template sertifikat sehingga format sertifikat tetap seragam. | MUST | 3 SP | Administrator dapat menambah dan memperbarui template sertifikat. |
+| US-19 | Sebagai administrator, saya ingin mengelola pengaturan sistem sehingga aplikasi dapat berjalan sesuai kebutuhan. | SHOULD | 3 SP | Pengaturan sistem dapat dikelola oleh administrator. |
+| US-20 | Sebagai administrator, saya ingin memeriksa laporan dan penyalahgunaan sistem sehingga keamanan aplikasi tetap terjaga. | SHOULD | 3 SP | Administrator dapat melihat laporan dan menindaklanjuti penyalahgunaan. |
