@@ -148,3 +148,59 @@ Registrasi digital merupakan proses pencatatan calon peserta melalui sistem elek
 Dalam AKSIKAMPUS, alur manajemen acara dimulai dari penyelenggara membuat draf acara, melengkapi informasi, lalu mengajukan publikasi sesuai kebijakan yang berlaku. Setelah acara dipublikasikan, mahasiswa dapat melihat detail dan mendaftar selama pendaftaran dibuka serta kuota tersedia. Penyelenggara dapat memantau pendaftar dan mencatat kehadiran. Jika jadwal atau ketentuan berubah, pembaruan perlu disampaikan melalui halaman acara dan, apabila tersedia, notifikasi kepada pengguna yang terdaftar. Aturan yang jelas membantu mengurangi kebingungan peserta maupun beban administrasi.
 
 </div>
+
+## **2.4 Sertifikat Digital dan Keamanan Data**
+
+<div align="justify">
+
+Sertifikat digital adalah dokumen elektronik yang digunakan untuk menyatakan bahwa seseorang telah mengikuti atau memenuhi persyaratan tertentu dalam suatu kegiatan. Dalam konteks seminar atau pelatihan kampus, sertifikat dapat menjadi bukti partisipasi atau penyelesaian kegiatan sesuai ketentuan penyelenggara. Penerbitan sertifikat perlu didasarkan pada aturan yang diumumkan sebelumnya, misalnya kehadiran minimum, penyelesaian tugas, atau validasi manual oleh panitia. Tidak semua acara harus menyediakan sertifikat; ketersediaannya perlu dinyatakan pada informasi acara.
+
+Distribusi sertifikat melalui aplikasi memungkinkan peserta mengakses dokumen dari halaman riwayat kegiatan tanpa harus mencari kembali tautan yang dibagikan melalui kanal lain. Penyelenggara dapat mengunggah sertifikat yang telah disiapkan atau menggunakan proses penerbitan terstruktur jika fitur tersebut dikembangkan. Setiap sertifikat perlu dikaitkan dengan peserta dan acara yang tepat, sementara akses unduh diberikan hanya kepada pengguna yang berhak. Jika diperlukan, sistem dapat menyediakan kode unik atau mekanisme verifikasi untuk membantu pemeriksaan keaslian dokumen.
+
+</div>
+
+### **Template Sertifikat Digital**
+
+<div align="justify">
+
+Template sertifikat digital merupakan rancangan atau format standar yang digunakan sebagai dasar penerbitan sertifikat bagi peserta kegiatan. Template dapat memuat logo institusi, judul sertifikat, nama lengkap peserta, nama kegiatan, tanggal pelaksanaan, nama penyelenggara, serta bagian tanda tangan atau pengesahan. Penggunaan template yang seragam dapat membantu menjaga konsistensi tampilan sertifikat dari berbagai kegiatan yang diselenggarakan melalui platform.
+
+Dalam aplikasi INFORHUB, template sertifikat direncanakan dapat dikelola oleh Administrator sesuai dengan kebutuhan dan ketentuan institusi. Penyelenggara menggunakan template yang tersedia untuk menerbitkan sertifikat bagi peserta yang telah memenuhi persyaratan kegiatan. Informasi yang dicantumkan pada sertifikat harus sesuai dengan data peserta dan kegiatan yang tersimpan dalam sistem. Dengan demikian, kesalahan penulisan identitas dan ketidaksesuaian informasi sertifikat dapat diminimalkan.
+
+</div>
+
+### **Identitas Mahasiswa dan Sertifikat**
+
+<div align="justify">
+
+Identitas pengguna diperlukan untuk membedakan setiap mahasiswa yang terdaftar dalam sistem. Identitas tersebut dapat menggunakan Nomor Induk Mahasiswa (NIM) sebagai identitas akademik, disertai akun pengguna yang memiliki identitas unik di dalam basis data. Data profil mahasiswa perlu dihubungkan dengan data pendaftaran, kehadiran, riwayat keikutsertaan, dan sertifikat yang diterbitkan. Pengelolaan hubungan data tersebut membantu memastikan bahwa informasi kegiatan dan sertifikat diberikan kepada mahasiswa yang tepat.
+
+Selain identitas mahasiswa, setiap sertifikat perlu memiliki nomor sertifikat unik sebagai pembeda antara satu sertifikat dan sertifikat lainnya. Nomor tersebut dapat digunakan untuk menelusuri catatan penerbitan sertifikat berdasarkan peserta dan kegiatan terkait. Apabila seorang mahasiswa mengikuti beberapa kegiatan, setiap sertifikat yang diterbitkan tetap memiliki nomor yang berbeda. Pemberian identitas unik pada mahasiswa dan sertifikat merupakan dua hal yang berbeda: NIM digunakan untuk membedakan mahasiswa, sedangkan nomor sertifikat digunakan untuk membedakan dokumen sertifikat yang diterbitkan.
+
+</div>
+
+### **Verifikasi Keaslian Sertifikat Menggunakan QR Code**
+
+<div align="justify">
+
+QR Code merupakan kode dua dimensi yang dapat dipindai menggunakan perangkat yang memiliki kamera atau aplikasi pembaca QR. Dalam pengelolaan sertifikat digital, QR Code dapat digunakan untuk memudahkan pemeriksaan keaslian sertifikat. QR Code pada sertifikat diarahkan ke halaman verifikasi yang merujuk pada catatan sertifikat di dalam sistem. Halaman tersebut dapat menampilkan informasi yang diperlukan untuk pemeriksaan, seperti nomor sertifikat, nama peserta, nama kegiatan, tanggal penerbitan, dan status sertifikat.
+
+Pada INFORHUB, proses verifikasi direncanakan dimulai ketika pihak pemeriksa memindai QR Code yang terdapat pada sertifikat. Sistem kemudian mencari catatan sertifikat berdasarkan kode atau alamat verifikasi tersebut. Jika catatan ditemukan dan statusnya valid, halaman verifikasi menampilkan informasi yang sesuai dengan data sertifikat yang tersimpan. Jika catatan tidak ditemukan atau sertifikat telah dicabut, sistem dapat menampilkan status yang menyatakan bahwa sertifikat tidak valid atau tidak lagi berlaku.
+
+Keberadaan QR Code saja tidak secara otomatis membuktikan keaslian sertifikat. Sistem tetap perlu mencocokkan kode dengan data yang tercatat pada basis data. Oleh karena itu, setiap sertifikat perlu memiliki identitas yang unik dan mekanisme pemeriksaan yang sesuai. Informasi yang ditampilkan pada halaman verifikasi juga perlu dibatasi pada data yang diperlukan untuk memastikan keaslian sertifikat, sehingga informasi pribadi peserta tidak dibuka secara berlebihan.
+
+</div>
+
+### **Keamanan Data dan Pengaturan Hak Akses**
+
+<div align="justify">
+
+Keamanan data merupakan bagian penting karena aplikasi mengelola informasi akun, pendaftaran, kehadiran, dan dokumen peserta. Prinsip dasar yang perlu diterapkan meliputi autentikasi pengguna, otorisasi berdasarkan role, validasi masukan, perlindungan kredensial, pembatasan akses berkas, serta pencatatan aktivitas penting. Pengumpulan data juga perlu dibatasi pada kebutuhan layanan dan disertai penjelasan mengenai tujuan penggunaannya.
+
+INFORHUB dirancang memiliki tiga role utama, yaitu Mahasiswa, Penyelenggara, dan Administrator. Mahasiswa dapat mengakses informasi kegiatan, mengelola pendaftaran, melihat riwayat keikutsertaan, dan mengunduh sertifikat miliknya sendiri. Penyelenggara dapat mengelola kegiatan yang menjadi tanggung jawabnya, melihat data peserta terkait, memvalidasi kehadiran, serta menerbitkan sertifikat sesuai ketentuan. Administrator bertugas mengelola akun dan role pengguna, memoderasi kegiatan, serta mengelola template sertifikat dan pengaturan sistem sesuai kewenangannya.
+
+Pembatasan hak akses diperlukan untuk mencegah pengguna melihat atau mengubah data yang tidak menjadi kewenangannya. Penyelenggara hanya perlu mengakses data peserta yang berkaitan dengan kegiatan yang dikelolanya, sedangkan mahasiswa tidak boleh mengakses sertifikat milik mahasiswa lain melalui fitur akun. Pihak yang memeriksa sertifikat dapat menggunakan halaman verifikasi QR Code untuk memastikan status sertifikat tanpa harus memperoleh akses ke seluruh data pribadi peserta. Pengaturan tersebut perlu diterapkan pada sisi sistem, bukan hanya dengan menyembunyikan menu pada tampilan aplikasi.
+
+Dengan menerapkan prinsip keamanan dan pembagian hak akses tersebut, INFORHUB diharapkan dapat mendukung pengelolaan kegiatan kampus mulai dari publikasi, pendaftaran, validasi kehadiran, hingga distribusi dan verifikasi sertifikat digital. Meskipun demikian, kualitas layanan tetap bergantung pada ketepatan data yang dimasukkan, validitas pencatatan kehadiran, kejelasan ketentuan penerbitan sertifikat, dan kedisiplinan penyelenggara dalam memperbarui informasi. Oleh karena itu, rancangan sistem perlu disertai aturan operasional yang disepakati oleh pihak terkait agar pengelolaan kegiatan dan sertifikat berjalan secara terstruktur.
+
+</div>
